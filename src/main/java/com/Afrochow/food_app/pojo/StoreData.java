@@ -9,7 +9,6 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-import static com.Afrochow.food_app.config.AppConstant.PHONE_NUMBER_VALIDATION;
 import static com.Afrochow.food_app.config.AppConstant.POSTAL_CODE_VALIDATION;
 
 @Data
@@ -54,11 +53,6 @@ public class StoreData {
 
     @NotNull (message = "Delivery Availability Cannot be Empty")
     private boolean deliveryAvailable;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime created_at;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime Updated_at;
-
 }
+
+//RECEIVES AND VALIDATE DATA FROM FRONTEND-BACKEND (INPUT PAYLOAD)

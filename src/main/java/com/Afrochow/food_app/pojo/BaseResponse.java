@@ -9,6 +9,7 @@ public class BaseResponse {
     private String message;
     private Object data;
 
+
     public BaseResponse() {
 
     }

@@ -23,7 +23,4 @@ public final class AppConstant {
 
     public static final String POSTAL_CODE_VALIDATION = "^[A-Za-z]\\d[A-Za-z] ?\\d[A-Za-z]\\d$";
 
-
-
-
 }

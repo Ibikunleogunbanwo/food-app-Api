@@ -54,11 +54,6 @@ public class UserProfileData {
     )
     private String phoneNumber;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime created_at;
-
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime Updated_at;
 }
 
 

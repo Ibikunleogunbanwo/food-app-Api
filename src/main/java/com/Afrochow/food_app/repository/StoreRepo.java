@@ -32,11 +32,4 @@ public interface StoreRepo extends JpaRepository<Store, Long> {
 
     List<Store> findAllByStoreCityContainingIgnoreCase(String storeCity);
 
-//    List<Store> findAllByStoreNameContainingIgnoreCase(String storeName);
-//
-//    List<Store> findAllByStoreCityAndStoreCategory(String city, String category);
-//
-//    Page<Store> findAllByStoreCityContainingIgnoreCase(String storeCity, Pageable pageable);
-//    Page<Store> findAllByStoreCategoryContainingIgnoreCase(String storeCategory, Pageable pageable);
-//    Page<Store> findAllByStoreNameContainingIgnoreCase(String storeName, Pageable pageable);
 }

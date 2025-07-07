@@ -8,7 +8,6 @@ public class ReUsableFunctions {
 
     public String encryptPassword(String userPassword) {
 
-
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.update(userPassword.getBytes());

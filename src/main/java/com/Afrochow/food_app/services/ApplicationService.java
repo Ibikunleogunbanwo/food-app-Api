@@ -225,7 +225,7 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse editUser(UpdateUserProfile updateUserProfile) {
+     public BaseResponse editUser(UpdateUserProfile updateUserProfile) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
@@ -483,7 +483,7 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse deleteSeller(String businessOwnerId) {
+    public BaseResponse deleteSeller (String businessOwnerId) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
@@ -559,7 +559,7 @@ public class ApplicationService {
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Store created successfully.");
-            baseResponse.setData(newStore);
+            baseResponse.setData(EMPTY_DATA);
 
         } catch (Exception e) {
             baseResponse.setStatusCode("500");

@@ -42,3 +42,5 @@ public class Store implements Serializable {
     }
 
 }
+
+//DEFINES THE STRUCTURE OF THE TABLE AND CREATES THE TABLE

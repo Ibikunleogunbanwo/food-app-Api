@@ -21,6 +21,6 @@ public class StoreDto {
     private boolean pickupAvailable;
     private boolean deliveryAvailable;
 
-
-
 }
+
+//TRANSFER DATA TO FRONTEND (RESPONSE PAYLOAD)
