@@ -23,6 +23,7 @@ public class Store implements Serializable {
     private String streetAddress;
     private String storeCity;
     private String storePostalCode;
+    private String storeProvince;
     private String storeCountry;
     private String storePhoneNumber;
     private String storeCategory;

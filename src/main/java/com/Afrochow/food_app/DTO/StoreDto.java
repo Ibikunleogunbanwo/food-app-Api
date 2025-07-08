@@ -13,6 +13,7 @@ public class StoreDto {
     private String storeCity;
     private String storePostalCode;
     private String storeCountry;
+    private String storeProvince;
     private String storePhoneNumber;
     private String storeCategory;
     private String storeHours;

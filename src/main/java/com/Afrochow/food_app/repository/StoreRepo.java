@@ -20,7 +20,9 @@ public interface StoreRepo extends JpaRepository<Store, Long> {
 
     @Query("SELECT s FROM Store s WHERE LOWER(s.storeCategory) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(s.storeName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(s.storeDescription) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "OR LOWER(s.storeDescription) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
+            "OR LOWER(s.storeProvince) LIKE LOWER(CONCAT('%', :keyword, '%'))"
+    )
     List<Store> searchByKeyword(@Param("keyword") String keyword);
 
 

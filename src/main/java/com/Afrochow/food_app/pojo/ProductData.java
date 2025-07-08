@@ -1,6 +1,8 @@
 package com.Afrochow.food_app.pojo;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -17,8 +19,9 @@ public class ProductData {
     @Size(min = 10, max = 80, message = "Product description must be between 10 and 80 characters")
     private String productDescription;
 
-    @NotEmpty(message = "product Price Cannot be Empty")
-    private float productPrice;
+    @NotNull(message = "Product price is required")
+    @Positive(message = "Price must be greater than 0")
+    private Float productPrice;
 
     @NotEmpty(message = "product Image Cannot be Empty")
     private String productImage;

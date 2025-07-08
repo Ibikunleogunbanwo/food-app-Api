@@ -24,6 +24,7 @@ public class Product implements Serializable {
     private LocalDateTime updatedAt;
 
     public Product() {
+
         this.createdAt = LocalDateTime.now();
     }
 

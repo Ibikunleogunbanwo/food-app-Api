@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -19,14 +20,14 @@ import static com.Afrochow.food_app.config.AppConstant.ERROR_STATUS_CODE;
 
 @CrossOrigin("*")
 @RestController
-@RequestMapping("/food-api")
+@RequestMapping("/Afrochow/api")
 @Tag(name = "Afrochow Food APis", description = "APIs for managing Users, Vendors, Stores & Products")
 
 
 
 
 public class ApplicationController {
-    //defining routes//
+
     @Autowired
     ApplicationService appService;
 
@@ -46,6 +47,8 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse, status);
     }
 
+
+
     @Operation(summary = "Create a new Vendor", description = "Add a new Vendor to the DB")
     @PostMapping("vendor/register")
     public ResponseEntity<?> createAccount(@Valid @RequestBody VendorProfileData sellerAccountData){
@@ -55,6 +58,28 @@ public class ApplicationController {
 
     }
 
+
+
+    @Operation(summary = "Create a new Product", description = "Add a new Product to a store")
+    @PostMapping("product/register")
+    public ResponseEntity<?> createProduct (@Valid @RequestBody ProductData productData){
+        BaseResponse baseResponse = appService.createProduct(productData);
+        HttpStatus status = Objects.equals(baseResponse.getStatusCode(),"200") ?HttpStatus.OK :HttpStatus.BAD_REQUEST;
+        return new ResponseEntity<>(baseResponse,status);
+    }
+
+
+    @Operation(summary = "Create a Bulk Product", description = "Add a Bulk Product to a store")
+    @PostMapping("product/bulkRegister")
+    public ResponseEntity<?> createBulkProduct (@Valid @RequestBody List<ProductData> productDataList){
+        BaseResponse baseResponse = appService.createBulkProduct(productDataList);
+        HttpStatus status = Objects.equals(baseResponse.getStatusCode(),"200") ?HttpStatus.OK :HttpStatus.BAD_REQUEST;
+        return new ResponseEntity<>(baseResponse,status);
+    }
+
+
+
+
     @Operation(summary = "Create a new user", description = "Add a new user to the DB")
     @PostMapping ("customer/register")
     public ResponseEntity<?> createUserAccount(@Valid @RequestBody UserProfileData userProfileData){
@@ -62,6 +87,7 @@ public class ApplicationController {
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse, status);
     }
+
 
     @Operation(summary = "Create a new Store", description = "Add a new Store to the DB")
     @PostMapping("store/register")
@@ -71,6 +97,7 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse,status);
     }
 
+
     @Operation(summary = "Update User Profile", description = "Modify Existing User Profile")
     @PutMapping("customer/update")
     public ResponseEntity<?> editUser (@Valid @RequestBody UpdateUserProfile updateUserProfile){
@@ -78,6 +105,7 @@ public class ApplicationController {
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse,status);
     }
+
 
     @Operation(summary = "Update Vendor Profile", description = "Modify Existing Vendor Profile")
     @PutMapping("vendor/update")
@@ -87,6 +115,7 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse,status);
     }
 
+
     @Operation(summary = "Update Store Information", description = "Modify Existing Store Information")
     @PutMapping("store/update")
     public ResponseEntity<?> editStore (@Valid @RequestBody UpdatedStoreData updatedStoreData){
@@ -94,6 +123,7 @@ public class ApplicationController {
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(),"200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse,status);
     }
+
 
     @Operation(summary = "Get all user", description = "Retrieve a list of all user in the system")
     @GetMapping ("customer/all")
@@ -103,6 +133,7 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse, status);
     }
 
+
     @Operation(summary = "Get all Vendor", description = "Retrieve a list of all Vendor in the system")
     @GetMapping ("vendor/all")
     public  ResponseEntity<?> getAllSellers() {
@@ -111,6 +142,7 @@ public class ApplicationController {
         return  new ResponseEntity<>(baseResponse, status);
 
     }
+
 
     @Operation(summary = "Get all Store", description = "Retrieve a list of all store in the system and search by StoreCategory or StoreName")
     @GetMapping("store/all")
@@ -136,6 +168,7 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse, status);
     }
 
+
     @Operation(summary = "Get Vendor by ID", description = "Retrieve a vendor's details using their ID")
     @GetMapping ("vendor")
     public ResponseEntity<?> getSellerById (@RequestParam("sellerId") String sellerId){
@@ -147,6 +180,7 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse, status);
 
     }
+
 
     @Operation(summary = "Get store by ID", description = "Retrieve a store's details using their ID")
     @GetMapping ("stores")
@@ -160,6 +194,7 @@ public class ApplicationController {
 
     }
 
+
     @Operation(summary = "Get stores by keyword", description = "Retrieve store's details using keyword")
     @GetMapping("stores/search")
     public ResponseEntity <?> getStoreByKeyword(@RequestParam("q") String keyword) {
@@ -168,6 +203,7 @@ public class ApplicationController {
         return new ResponseEntity<>(baseResponse, status);
 
     }
+
 
     @Operation(summary = "Get stores by location", description = "Retrieve store's details using their location")
     @GetMapping("stores/location")

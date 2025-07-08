@@ -4,10 +4,12 @@ import com.Afrochow.food_app.DTO.VendorDTO;
 import com.Afrochow.food_app.DTO.StoreDto;
 import com.Afrochow.food_app.DTO.UserDTO;
 import com.Afrochow.food_app.config.ReUsableFunctions;
+import com.Afrochow.food_app.model.Product;
 import com.Afrochow.food_app.model.User;
 import com.Afrochow.food_app.model.Vendor;
 import com.Afrochow.food_app.model.Store;
 import com.Afrochow.food_app.pojo.*;
+import com.Afrochow.food_app.repository.ProductRepo;
 import com.Afrochow.food_app.repository.VendorRepo;
 import com.Afrochow.food_app.repository.StoreRepo;
 import com.Afrochow.food_app.repository.UserRepo;
@@ -32,6 +34,9 @@ public class ApplicationService {
 
     @Autowired
     StoreRepo storeRepo;
+
+    @Autowired
+    ProductRepo productRepo;
 
     ReUsableFunctions reUsableFunctions = new ReUsableFunctions();
 
@@ -548,6 +553,7 @@ public class ApplicationService {
             newStore.setStoreCity(storeData.getStoreCity());
             newStore.setStoreCountry(storeData.getStoreCountry());
             newStore.setStorePostalCode(storeData.getStorePostalCode());
+            newStore.setStoreProvince(storeData.getStoreProvince());
             newStore.setStorePhoneNumber(vendor.getPhoneNumber());
             newStore.setStoreCategory(storeData.getStoreCategory());
             newStore.setStoreHours(storeData.getStoreHours());
@@ -839,6 +845,108 @@ public class ApplicationService {
             baseResponse.setData(EMPTY_DATA);
         }
 
+        return baseResponse;
+    }
+
+
+
+//    .............................Create Products.....................................................
+
+    public BaseResponse createProduct (ProductData productData){
+
+        BaseResponse baseResponse = new BaseResponse(true);
+
+        try {
+
+            Optional<Store> getStoreIdDetails = storeRepo.findByStoreId(productData.getStoreId());
+            if (getStoreIdDetails.isEmpty()){
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Store ID not Valid");
+                baseResponse.setData(EMPTY_DATA);
+
+                return baseResponse;
+            }
+
+            Store store  = getStoreIdDetails.get();
+
+            Product registeredProduct = new Product();
+
+            registeredProduct.setProductId(reUsableFunctions.generateId(productData.getProductName()));
+            registeredProduct.setStoreId(store.getStoreId());
+            registeredProduct.setProductName(productData.getProductName());
+            registeredProduct.setProductPrice(productData.getProductPrice());
+            registeredProduct.setProductDescription(productData.getProductDescription());
+            registeredProduct.setProductImage(productData.getProductImage());
+
+            productRepo.save(registeredProduct);
+
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Product created successfully.");
+            baseResponse.setData(EMPTY_DATA);
+
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+        }
+
+
+        return baseResponse;
+    }
+
+
+
+    public BaseResponse createBulkProduct (List<ProductData> productDataList) {
+        BaseResponse baseResponse = new BaseResponse();
+
+        try {
+            if (productDataList == null || productDataList.isEmpty()) {
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Product list cannot be empty.");
+                baseResponse.setData(EMPTY_DATA);
+                return baseResponse;
+            }
+
+            String storeId = productDataList.get(0).getStoreId();
+            Optional<Store> getStoreIdDetails = storeRepo.findByStoreId(storeId);
+            if (getStoreIdDetails.isEmpty()) {
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Store ID not valid.");
+                baseResponse.setData(EMPTY_DATA);
+                return baseResponse;
+            }
+
+            Store store = getStoreIdDetails.get();
+            List<Product> productsToSave = new ArrayList<>();
+
+            for (ProductData data : productDataList) {
+                if (!storeId.equals(data.getStoreId())) {
+                    continue;
+                }
+                Product product = new Product();
+                product.setProductId(reUsableFunctions.generateId(data.getProductName()));
+                product.setStoreId(store.getStoreId());
+                product.setProductName(data.getProductName());
+                product.setProductPrice(data.getProductPrice());
+                product.setProductDescription(data.getProductDescription());
+                product.setProductImage(data.getProductImage());
+
+                productsToSave.add(product);
+            }
+
+            productRepo.saveAll(productsToSave);
+
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Products created successfully.");
+            baseResponse.setData(EMPTY_DATA);
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+
+        }
         return baseResponse;
     }
 
