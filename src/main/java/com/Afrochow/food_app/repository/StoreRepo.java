@@ -13,6 +13,7 @@ public interface StoreRepo extends JpaRepository<Store, Long> {
     Optional<Store> findByStorePhoneNumber(String storePhoneNumber);
 
     Optional<Store>  findByStoreId (String storeId);
+    List<Store> findStoreByStoreNameIgnoreCase(String storeName);
     List<Store> findAllByOrderByStoreIdDesc();
     List<Store> findAllByStoreNameContainingIgnoreCase(String storeName);
     List<Store> findAllByStoreCategoryContainingIgnoreCase(String storeCategory);

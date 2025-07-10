@@ -11,8 +11,8 @@ public interface VendorRepo extends JpaRepository<Vendor, Long> {
 
     Optional<Vendor> findByEmailAddress (String sellerEmailAddress);
     Optional<Vendor> findByPhoneNumber (String sellerPhoneNumber);
-    Optional<Vendor> findByBusinessOwnerId (String businessOwnerId);
-    List<Vendor> findAllByOrderByBusinessOwnerIdDesc();
+    Optional<Vendor> findByVendorId(String vendorId);
+    List<Vendor> findAllByOrderByVendorIdDesc();
 
 
 

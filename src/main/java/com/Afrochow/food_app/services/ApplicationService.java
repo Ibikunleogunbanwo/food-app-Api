@@ -282,9 +282,9 @@ public class ApplicationService {
     }
 
 
-    //........................BUSINESS_OWNER_PROFILE SERVICE................................. //
+    //........................VENDOR SERVICE................................. //
 
-    public BaseResponse createSellerAccount(VendorProfileData vendorProfileData) {
+    public BaseResponse createVendorAccount(VendorProfileData vendorProfileData) {
         BaseResponse baseResponse = new BaseResponse(true);
         try {
             // Check if email already exists
@@ -308,7 +308,8 @@ public class ApplicationService {
 
             // Create new seller account
             Vendor vendor = new Vendor();
-            vendor.setBusinessOwnerId(reUsableFunctions.generateId(vendorProfileData.getLastName()));
+
+            vendor.setVendorId(reUsableFunctions.generateId(vendorProfileData.getLastName()));
             vendor.setFirstName(vendorProfileData.getFirstName());
             vendor.setLastName(vendorProfileData.getLastName());
             vendor.setEmailAddress(vendorProfileData.getEmailAddress());
@@ -328,7 +329,7 @@ public class ApplicationService {
             vendorRepo.save(vendor);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-            baseResponse.setMessage("Account created successfully.");
+            baseResponse.setMessage("Vendor Account created successfully.");
             baseResponse.setData(EMPTY_DATA);
 
         } catch (Exception e) {
@@ -340,18 +341,18 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getAllSellers() {
+    public BaseResponse getAllVendor() {
 
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            List<Vendor> fetchAllSellers = vendorRepo.findAllByOrderByBusinessOwnerIdDesc();
+            List<Vendor> fetchAllSellers = vendorRepo.findAllByOrderByVendorIdDesc();
             List<VendorDTO> sellerResult = new ArrayList<>();
 
             for (Vendor vendor : fetchAllSellers) {
                 VendorDTO vendorDTO = new VendorDTO();
 
-                vendorDTO.setBusinessOwnerId(vendor.getBusinessOwnerId());
+                vendorDTO.setVendorId(vendor.getVendorId());
                 vendorDTO.setFirstName(vendor.getFirstName());
                 vendorDTO.setLastName(vendor.getLastName());
                 vendorDTO.setEmailAddress(vendor.getEmailAddress());
@@ -379,11 +380,11 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getSellerById(String businessOwnerId) {
+    public BaseResponse getVendorById(String vendorId) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByBusinessOwnerId(businessOwnerId);
+            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(vendorId);
             if(getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Business Owner Id does not Exist");
@@ -398,7 +399,7 @@ public class ApplicationService {
 
             VendorDTO vendorDTO = new VendorDTO();
 
-            vendorDTO.setBusinessOwnerId(vendor.getBusinessOwnerId());
+            vendorDTO.setVendorId(vendor.getVendorId());
             vendorDTO.setFirstName(vendor.getFirstName());
             vendorDTO.setLastName(vendor.getLastName());
             vendorDTO.setEmailAddress(vendor.getEmailAddress());
@@ -428,15 +429,15 @@ public class ApplicationService {
 
     }
 
-    public BaseResponse editSeller(UpdateVendorProfile updateVendorProfile) {
+    public BaseResponse editVendor(UpdateVendorProfile updateVendorProfile) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
 
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByBusinessOwnerId(updateVendorProfile.getBusinessOwnerId());
+            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(updateVendorProfile.getBusinessOwnerId());
             if(getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("Business Owner Id does not Exist");
+                baseResponse.setMessage("Vendor Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
 
                 return baseResponse;
@@ -488,14 +489,14 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse deleteSeller (String businessOwnerId) {
+    public BaseResponse deleteVendor(String vendorId) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByBusinessOwnerId(businessOwnerId);
+            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(vendorId);
             if(getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("Business Owner Id does not Exist");
+                baseResponse.setMessage("Vendor Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
 
                 return baseResponse;
@@ -507,7 +508,7 @@ public class ApplicationService {
             vendorRepo.delete(vendor);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-            baseResponse.setMessage("Seller Deleted Successfully");
+            baseResponse.setMessage("Vendor Deleted Successfully");
             baseResponse.setData(EMPTY_DATA);
 
         } catch (Exception e) {
@@ -529,8 +530,8 @@ public class ApplicationService {
 
         try {
 
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByBusinessOwnerId(storeData.getBusinessOwnerId());
-            if(getBusinessOwnerDetails.isEmpty()) {
+            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorId(storeData.getVendorId());
+            if(getVendorDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Business Owner Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
@@ -539,13 +540,24 @@ public class ApplicationService {
 
             }
 
-            Vendor vendor = getBusinessOwnerDetails.get();
-            // Create and populate new store //
+            List<Store> checkStoreName = storeRepo.findStoreByStoreNameIgnoreCase(storeData.getStoreName());
+            if(!checkStoreName.isEmpty()) {
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Store Name not available");
+                baseResponse.setData(EMPTY_DATA);
+
+                return baseResponse;
+            }
+
+
+
+            Vendor vendor = getVendorDetails.get();
+           
 
             Store newStore = new Store();
 
             newStore.setStoreId(reUsableFunctions.generateId(storeData.getStoreName()));
-            newStore.setBusinessOwnerId(storeData.getBusinessOwnerId());
+            newStore.setVendor(vendor);
             newStore.setStoreLogo(storeData.getStoreLogo());
             newStore.setStoreName(storeData.getStoreName());
             newStore.setStoreDescription(storeData.getStoreDescription());
@@ -558,8 +570,8 @@ public class ApplicationService {
             newStore.setStoreCategory(storeData.getStoreCategory());
             newStore.setStoreHours(storeData.getStoreHours());
             newStore.setMaxDeliveryDistance(storeData.getMaxDeliveryDistance());
-            newStore.setPickupAvailable(storeData.isPickupAvailable());
-            newStore.setDeliveryAvailable(storeData.isDeliveryAvailable());
+            newStore.setPickupAvailable(Boolean.TRUE.equals(storeData.getPickupAvailable()));
+            newStore.setDeliveryAvailable(Boolean.TRUE.equals(storeData.getDeliveryAvailable()));
 
             storeRepo.save(newStore);
 
@@ -580,7 +592,7 @@ public class ApplicationService {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> businessOwner = vendorRepo.findByBusinessOwnerId(updatedStoreData.getBusinessOwnerId());
+            Optional<Vendor> businessOwner = vendorRepo.findByVendorId(updatedStoreData.getBusinessOwnerId());
             Optional<Store> getStore = storeRepo.findByStoreId(updatedStoreData.getStoreId());
 
             if (getStore.isEmpty()) {
@@ -678,6 +690,7 @@ public class ApplicationService {
             for (Store store : stores) {
                 StoreDto storeDto = new StoreDto();
 
+                storeDto.setStoreId(store.getStoreId());
                 storeDto.setStoreLogo(store.getStoreLogo());
                 storeDto.setStoreName(store.getStoreName());
                 storeDto.setStoreCategory(store.getStoreCategory());
@@ -762,7 +775,7 @@ public class ApplicationService {
 
             if (storeList.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage( "No stores found with keyword " + keyword);
+                baseResponse.setMessage( "No store found with the keyword " + keyword);
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
@@ -872,7 +885,7 @@ public class ApplicationService {
             Product registeredProduct = new Product();
 
             registeredProduct.setProductId(reUsableFunctions.generateId(productData.getProductName()));
-            registeredProduct.setStoreId(store.getStoreId());
+            registeredProduct.setStore(store);
             registeredProduct.setProductName(productData.getProductName());
             registeredProduct.setProductPrice(productData.getProductPrice());
             registeredProduct.setProductDescription(productData.getProductDescription());
@@ -926,7 +939,7 @@ public class ApplicationService {
                 }
                 Product product = new Product();
                 product.setProductId(reUsableFunctions.generateId(data.getProductName()));
-                product.setStoreId(store.getStoreId());
+                product.setStore(store);
                 product.setProductName(data.getProductName());
                 product.setProductPrice(data.getProductPrice());
                 product.setProductDescription(data.getProductDescription());

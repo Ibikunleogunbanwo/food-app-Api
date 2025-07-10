@@ -13,7 +13,7 @@ public interface ProductRepo extends JpaRepository<Product, Long> {
 
     Optional<Product> findProductByProductName (String productName);
 
-    Optional<Product> findProductByStoreId(String storeId);
+    List<Product> findAllByStore_StoreId(String storeId);
 
 //
 //    // 1. Add pagination to limit results

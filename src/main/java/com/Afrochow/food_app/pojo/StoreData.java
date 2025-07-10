@@ -1,24 +1,17 @@
 package com.Afrochow.food_app.pojo;
 
-
-import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 import static com.Afrochow.food_app.config.AppConstant.POSTAL_CODE_VALIDATION;
 
 @Data
 public class StoreData {
 
-    @Column(name = "VendorId")
     @NotEmpty(message = "Business Owner Id Cannot be Empty")
-    private String businessOwnerId;
-
+    private String vendorId;
 
     private String storeLogo;
 
@@ -55,11 +48,9 @@ public class StoreData {
 
     private String maxDeliveryDistance;
 
-    @NotNull (message = "Pick up Availability cannot be Empty")
-    private boolean pickupAvailable;
+    @NotNull(message = "Pickup availability is required")
+    private Boolean pickupAvailable;
 
-    @NotNull (message = "Delivery Availability Cannot be Empty")
-    private boolean deliveryAvailable;
+    @NotNull(message = "Delivery availability is required")
+    private Boolean deliveryAvailable;
 }
-
-//RECEIVES AND VALIDATE DATA FROM FRONTEND-BACKEND (INPUT PAYLOAD)
