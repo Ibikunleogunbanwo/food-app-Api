@@ -1,48 +1,50 @@
 package com.Afrochow.food_app.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
-@Table(name = "vendors")
-public class Vendor implements Serializable {
+@DiscriminatorValue("VENDOR")
+public class Vendor extends User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String vendorId;
 
-    private String firstName;
-    private String lastName;
-    private String emailAddress;
-    private String password;
-    private String streetAddress;
-    private String apartmentNumber;
-    private String city;
-    private String province;
-    private String postalCode;
-    private String country;
-    private String phoneNumber;
-    private String idCardFront;
-    private String idCardBack;
-    private String profilePhoto;
+    @Column(unique = true)
+    private String businessLicenseNumber;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String businessName;
+    private String taxId;
 
-    @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Column(length = 512)
+    private String idCardFrontUrl;
+
+    @Column(length = 512)
+    private String idCardBackUrl;
+
+    @Column(length = 512)
+    private String businessLogoUrl;
+
+    @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Store> stores = new ArrayList<>();
 
-    public Vendor() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+    @OneToMany(mappedBy = "vendor", fetch = FetchType.LAZY)
+    private List<Product> products = new ArrayList<>();
+
+    public void addStore(Store store) {
+        stores.add(store);
+        store.setVendor(this);
+    }
+
+    public void removeStore(Store store) {
+        stores.remove(store);
+        store.setVendor(null);
     }
 }

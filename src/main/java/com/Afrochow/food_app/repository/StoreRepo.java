@@ -12,27 +12,60 @@ public interface StoreRepo extends JpaRepository<Store, Long> {
 
     Optional<Store> findByStorePhoneNumber(String storePhoneNumber);
 
-    Optional<Store>  findByStoreId (String storeId);
+//    Optional<Store> findByStoreId(String storeId);
+
+    Optional<Store> findByStoreCode(String storeCode);
+
+    @Query("select s.storeCode from Store s WHERE s.storeCode = :storeCode")
+    Optional<Store> findByStoreCodeOnly(@Param("storeCode") String storeCode);
+
     List<Store> findStoreByStoreNameIgnoreCase(String storeName);
-    List<Store> findAllByOrderByStoreIdDesc();
+
+    @Query("SELECT s FROM Store s ORDER BY s.storeCode DESC")
+    List<Store> findAllByOrderByProductCodeDesc();
+
     List<Store> findAllByStoreNameContainingIgnoreCase(String storeName);
+
     List<Store> findAllByStoreCategoryContainingIgnoreCase(String storeCategory);
+
     List<Store> findByStoreCategoryContainingIgnoreCaseAndStoreNameContainingIgnoreCase(String storeCategory, String storeName);
 
-    @Query("SELECT s FROM Store s WHERE LOWER(s.storeCategory) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(s.storeName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(s.storeDescription) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
-            "OR LOWER(s.storeProvince) LIKE LOWER(CONCAT('%', :keyword, '%'))"
-    )
+    // Corrected searchByKeyword to reference address fields properly
+    @Query("SELECT s FROM Store s WHERE " +
+            "LOWER(s.storeCategory) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.storeName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.storeDescription) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.address.province) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Store> searchByKeyword(@Param("keyword") String keyword);
 
-
+    // Corrected searchByLocation to reference address fields properly
     @Query("SELECT s FROM Store s WHERE " +
-            "LOWER(s.storeCity) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(s.storePostalCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(s.streetAddress) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "LOWER(s.address.city) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.address.postalCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(s.address.streetAddress) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Store> searchByLocation(@Param("keyword") String keyword);
 
-    List<Store> findAllByStoreCityContainingIgnoreCase(String storeCity);
+    // Method using property navigation on address field in method name (already correct)
+    List<Store> findAllByAddress_CityContainingIgnoreCase(String city);
+
+    @Query("SELECT s FROM Store s LEFT JOIN FETCH s.availableProducts WHERE s.storeCode = :storeCode")
+    Optional<Store> findByStoreCodeWithProducts(@Param("storeCode") String storeCode);
+
+
+    // With products and product details eager loaded
+    @Query("SELECT s FROM Store s " +
+            "LEFT JOIN FETCH s.availableProducts ap " +
+            "LEFT JOIN FETCH ap.product " +
+            "WHERE s.storeCode = :storeCode")
+    Optional<Store> findByStoreCodeWithProductsAndDetails(@Param("storeCode") String storeCode);
+
+
+    // With products, product details, and vendor
+    @Query("SELECT s FROM Store s " +
+            "LEFT JOIN FETCH s.availableProducts ap " +
+            "LEFT JOIN FETCH ap.product " +
+            "LEFT JOIN FETCH s.vendor " +
+            "WHERE s.storeCode = :storeCode")
+    Optional<Store> findByStoreCodeWithFullDetails(@Param("storeCode") String storeCode);
 
 }

@@ -1,4 +1,4 @@
-package com.Afrochow.food_app.DTO;
+package com.Afrochow.food_app.response_dto;
 
 
 import lombok.Data;

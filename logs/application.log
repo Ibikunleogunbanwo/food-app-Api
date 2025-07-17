@@ -1,0 +1,7 @@
+2025-07-16T22:09:03.772-06:00  INFO 48328 --- [food_app] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-07-16T22:09:03.782-06:00  INFO 48328 --- [food_app] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 7 ms
+2025-07-16T22:19:55.992-06:00  INFO 55891 --- [food_app] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 440 ms
+2025-07-16T22:23:02.319-06:00  INFO 55891 --- [food_app] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-07-16T22:23:02.325-06:00  INFO 55891 --- [food_app] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2025-07-16T22:44:05.187-06:00  INFO 56076 --- [food_app] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 406 ms
+2025-07-16T22:44:45.745-06:00  INFO 56244 --- [food_app] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 407 ms

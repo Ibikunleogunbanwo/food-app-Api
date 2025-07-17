@@ -1,53 +1,81 @@
 package com.Afrochow.food_app.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
 @Entity
 @Table(name = "stores")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EntityListeners(AuditingEntityListener.class)
 public class Store implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String storeId;
+    @Column(name = "store_code", unique = true, nullable = false)
+    private String storeCode;
 
+    @Column(nullable = false)
     private String storeName;
+
     private String storeDescription;
     private String storeLogo;
-
-    private String streetAddress;
-    private String storeCity;
-    private String storeProvince;
-    private String storePostalCode;
-    private String storeCountry;
     private String storePhoneNumber;
     private String storeCategory;
-    private String storeHours;
+
+    private LocalTime storeOpeningHours;
+    private LocalTime storeClosingHours;
+
     private String maxDeliveryDistance;
 
     private boolean pickupAvailable;
     private boolean deliveryAvailable;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    @Column(name = "vendor_code", nullable = false)
+    private String vendorCode;
 
-    // Many stores belong to one vendor
+    @CreatedDate
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "address_id", referencedColumnName = "id")
+    private Address address;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id", referencedColumnName = "vendorId") // FK in 'stores' table
+    @JoinColumn(name = "vendor_id", referencedColumnName = "id", nullable = false)
     private Vendor vendor;
 
-    // One store can have many products
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Product> products = new ArrayList<>();
+    @Builder.Default
+    private List<StoreProduct> availableProducts = new ArrayList<>();
+
+    // Utility methods
+    public void addProduct(Product product) {
+        StoreProduct storeProduct = new StoreProduct(this, product);
+        availableProducts.add(storeProduct);
+        product.getAvailableInStores().add(storeProduct);
+    }
+
+    public void removeProduct(Product product) {
+        availableProducts.removeIf(sp -> sp.getProduct().equals(product));
+        product.getAvailableInStores().removeIf(sp -> sp.getStore().equals(this));
+    }
 }

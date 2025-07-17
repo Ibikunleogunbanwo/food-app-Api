@@ -1,24 +1,18 @@
 package com.Afrochow.food_app.services;
 
-import com.Afrochow.food_app.DTO.VendorDTO;
-import com.Afrochow.food_app.DTO.StoreDto;
-import com.Afrochow.food_app.DTO.UserDTO;
+import com.Afrochow.food_app.model.*;
+import com.Afrochow.food_app.repository.*;
+import com.Afrochow.food_app.response_dto.*;
 import com.Afrochow.food_app.config.ReUsableFunctions;
-import com.Afrochow.food_app.model.Product;
-import com.Afrochow.food_app.model.User;
-import com.Afrochow.food_app.model.Vendor;
-import com.Afrochow.food_app.model.Store;
 import com.Afrochow.food_app.pojo.*;
-import com.Afrochow.food_app.repository.ProductRepo;
-import com.Afrochow.food_app.repository.VendorRepo;
-import com.Afrochow.food_app.repository.StoreRepo;
-import com.Afrochow.food_app.repository.UserRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 import static com.Afrochow.food_app.config.AppConstant.*;
@@ -30,6 +24,9 @@ public class ApplicationService {
     UserRepo userRepo;
 
     @Autowired
+    private CustomerRepo customerRepo;
+
+    @Autowired
     VendorRepo vendorRepo;
 
     @Autowired
@@ -38,10 +35,13 @@ public class ApplicationService {
     @Autowired
     ProductRepo productRepo;
 
+    @Autowired
+    FileStorageService fileStorageService;
+
     ReUsableFunctions reUsableFunctions = new ReUsableFunctions();
 
 
-    //........................User Services................................. //
+    //........................Customer Services................................. //
 
     public BaseResponse testing() {
         BaseResponse baseResponse = new BaseResponse(true);
@@ -52,11 +52,11 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse createAccount(UserProfileData userProfileData) {
+    public BaseResponse createCustomerAccount(CustomerRegistration customerRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
         try {
             //check if email address exist//
-            Optional<User> emailExist = userRepo.findByEmailAddress(userProfileData.getEmailAddress());
+            Optional<User> emailExist = userRepo.findByEmail(customerRegistration.getEmail());
             if (emailExist.isPresent()) {
                 baseResponse.setStatusCode("409");
                 baseResponse.setMessage("Email Address already exist, Kindly register with another email or login");
@@ -65,7 +65,7 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            Optional<User> phoneNumberExist = userRepo.findByPhoneNumber(userProfileData.getPhoneNumber());
+            Optional<User> phoneNumberExist = userRepo.findByPhoneNumber(customerRegistration.getPhoneNumber());
             if (phoneNumberExist.isPresent()) {
                 baseResponse.setStatusCode("409");
                 baseResponse.setMessage("Phone Number already exist, Kindly register with another phone number or login");
@@ -74,27 +74,47 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            //get data and pass to entity
-            User user = new User();
-            user.setFirstName(userProfileData.getFirstName());
-            user.setLastName(userProfileData.getLastName());
-            user.setEmailAddress(userProfileData.getEmailAddress());
-            user.setPassword(reUsableFunctions.encryptPassword(userProfileData.getPassword()));
-            user.setStreetAddress(userProfileData.getStreetAddress());
-            user.setCountry(userProfileData.getCountry());
-            user.setPostalCode(userProfileData.getPostalCode());
-            user.setProvince(userProfileData.getProvince());
-            user.setApartmentNumber(userProfileData.getApartmentNumber());
-            user.setCity(userProfileData.getCity());
-            user.setPhoneNumber(userProfileData.getPhoneNumber());
+
+            Customer customer = new Customer();
+
+            customer.setFirstName(customerRegistration.getFirstName());
+            customer.setLastName(customerRegistration.getLastName());
+            customer.setUserId(reUsableFunctions.generateId(customer.getFirstName()));
+            customer.setCustomerId(reUsableFunctions.generateId(customerRegistration.getLastName()));
+            customer.setEmail(customerRegistration.getEmail());
+            customer.setPassword(reUsableFunctions.encryptPassword(customerRegistration.getPassword()));
+            customer.setPhoneNumber(customerRegistration.getPhoneNumber());
+            customer.setLoyaltyPoints(
+                    customerRegistration.getLoyaltyPoints() != null ? customerRegistration.getLoyaltyPoints() : 0
+            );
+            customer.setPreferredDeliveryTime(customerRegistration.getPreferredDeliveryTime());
 
 
+            Address address = new Address();
+            if (customerRegistration.getAddress() != null) {
+                address.setApartmentNumber(customerRegistration.getAddress().getApartmentNumber());
+                address.setStreetAddress(customerRegistration.getAddress().getStreetAddress());
+                address.setCountry(customerRegistration.getAddress().getCountry());
+                address.setCity(customerRegistration.getAddress().getCity());
+                address.setPostalCode(customerRegistration.getAddress().getPostalCode());
+                address.setProvince(customerRegistration.getAddress().getProvince());
+            }
 
-            //save entity inside repository
-            userRepo.save(user);
+
+            customer.setAddress(address);
+            userRepo.save(customer);
+
+
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Account created successfully");
-            baseResponse.setData(EMPTY_DATA);
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Vendor account created successfully.");
+            baseResponse.setData(Map.of(
+                    "CustomerId", customer.getCustomerId(),
+                    "email", customer.getEmail(),
+                    "First Name", customer.getFirstName(),
+                    "Last Name", customer.getLastName()
+            ));
 
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
@@ -105,42 +125,56 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getallUsers() {
+    public BaseResponse getAllCustomers() {
         BaseResponse baseResponse = new BaseResponse(true);
-        try {
-            List<User> fetchAllUser = userRepo.findAllByOrderByIdDesc();
-            List<UserDTO> result = new ArrayList<>();
-            for (User user : fetchAllUser) {
-                UserDTO userDTO = new UserDTO();
-                userDTO.setFirstName(user.getFirstName());
-                userDTO.setLastName(user.getLastName());
-                userDTO.setEmailAddress(user.getEmailAddress());
-                userDTO.setCountry(user.getCountry());
-                userDTO.setApartmentNumber(user.getApartmentNumber());
-                userDTO.setProvince(user.getProvince());
-                userDTO.setPostalCode(user.getPostalCode());
-                userDTO.setStreetAddress(user.getStreetAddress());
-                userDTO.setPhoneNumber(user.getPhoneNumber());
-                userDTO.setCity(user.getCity());
-                userDTO.setId(user.getId());
 
-                result.add(userDTO);
+        try {
+            List<Customer> fetchAllCustomer = customerRepo.findAllByOrderByIdDesc();
+            List<CustomerDTO> result = new ArrayList<>();
+
+            for (Customer customer : fetchAllCustomer) {
+                CustomerDTO customerDTO = new CustomerDTO();
+                AddressDTO addressDTO = new AddressDTO();
+
+                customerDTO.setUserId(customer.getId().toString());
+                customerDTO.setFirstName(customer.getFirstName());
+                customerDTO.setLastName(customer.getLastName());
+                customerDTO.setEmail(customer.getEmail());
+                customerDTO.setPhoneNumber(customer.getPhoneNumber());
+                customerDTO.setLoyaltyPoints(customer.getLoyaltyPoints());
+                customerDTO.setPreferredDeliveryTime(customer.getPreferredDeliveryTime());
+
+
+                if (customer.getAddress() != null) {
+                    Address address = customer.getAddress();
+
+                    addressDTO.setStreetAddress(address.getStreetAddress());
+                    addressDTO.setApartmentNumber(address.getApartmentNumber());
+                    addressDTO.setCity(address.getCity());
+                    addressDTO.setProvince(address.getProvince());
+                    addressDTO.setCountry(address.getCountry());
+                    addressDTO.setPostalCode(address.getPostalCode());
+
+                    customerDTO.setAddress(addressDTO);
+                }
+
+                result.add(customerDTO);
             }
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-            baseResponse.setMessage("SUCCESSFUL");
+            baseResponse.setMessage("Customers retrieved successfully");
             baseResponse.setData(result);
 
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
         }
 
         return baseResponse;
-
-
     }
 
-    public BaseResponse deleteUser(String userId) {
+    public BaseResponse deleteCustomer(String userId) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
@@ -152,6 +186,7 @@ public class ApplicationService {
             }
 
             long id;
+
             try {
                 id = Long.parseLong(userId);
             } catch (NumberFormatException e) {
@@ -162,7 +197,7 @@ public class ApplicationService {
             }
 
             User user = userRepo.findById(id)
-                    .orElseThrow(() -> new RuntimeException("No seller found with ID: " + userId));
+                    .orElseThrow(() -> new RuntimeException("No User found with ID: " + userId));
 
             userRepo.delete(user);
 
@@ -179,7 +214,7 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getUserById(String userId) {
+    public BaseResponse getCustomerById(String userId) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
@@ -191,6 +226,7 @@ public class ApplicationService {
             }
 
             long id;
+
             try {
                 id = Long.parseLong(userId);
             } catch (NumberFormatException e) {
@@ -200,25 +236,34 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            User user = userRepo.findById(id)
+            Customer customer = customerRepo.findCustomerById(id)
                     .orElseThrow(() -> new RuntimeException("No user found"));
 
-            UserDTO userDTO = new UserDTO();
-            userDTO.setId(user.getId());
-            userDTO.setFirstName(user.getFirstName());
-            userDTO.setLastName(user.getLastName());
-            userDTO.setEmailAddress(user.getEmailAddress());
-            userDTO.setCountry(user.getCountry());
-            userDTO.setApartmentNumber(user.getApartmentNumber());
-            userDTO.setProvince(user.getProvince());
-            userDTO.setPostalCode(user.getPostalCode());
-            userDTO.setStreetAddress(user.getStreetAddress());
-            userDTO.setPhoneNumber(user.getPhoneNumber());
-            userDTO.setCity(user.getCity());
+            CustomerDTO customerDTO = new CustomerDTO();
+
+            customerDTO.setUserId(customer.getUserId());
+            customerDTO.setFirstName(customer.getFirstName());
+            customerDTO.setLastName(customer.getLastName());
+            customerDTO.setEmail(customer.getEmail());
+            customerDTO.setPhoneNumber(customer.getPhoneNumber());
+
+            if (customer.getAddress() != null) {
+                Address address = customer.getAddress();
+                AddressDTO addressDTO = new AddressDTO();
+
+                addressDTO.setCountry(address.getCountry());
+                addressDTO.setApartmentNumber(address.getApartmentNumber());
+                addressDTO.setProvince(address.getProvince());
+                addressDTO.setPostalCode(address.getPostalCode());
+                addressDTO.setStreetAddress(address.getStreetAddress());
+                addressDTO.setCity(address.getCity());
+
+                customerDTO.setAddress(addressDTO);
+            }
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage(SUCCESS_MESSAGE);
-            baseResponse.setData(userDTO);
+            baseResponse.setData(customerDTO);
 
         } catch (Exception e) {
             // Logging the exception is recommended here
@@ -230,16 +275,16 @@ public class ApplicationService {
         return baseResponse;
     }
 
-     public BaseResponse editUser(UpdateUserProfile updateUserProfile) {
+    public BaseResponse editCustomer(EditCustomer editCustomer) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Long userId = Long.parseLong(updateUserProfile.getUserId());
-            String newPhoneNumber = updateUserProfile.getPhoneNumber();
+            Long userId = Long.parseLong(editCustomer.getUserId());
+            String newPhoneNumber = editCustomer.getPhoneNumber();
 
-            // Check if phone number is being updated and already exists for a different user
+            // Check for existing phone number assigned to a different customer
             if (newPhoneNumber != null && !newPhoneNumber.trim().isEmpty()) {
-                Optional<User> existingCustomerWithPhone = userRepo.findByPhoneNumber(newPhoneNumber.trim());
+                Optional<Customer> existingCustomerWithPhone = customerRepo.findCustomerByPhoneNumber(newPhoneNumber.trim());
 
                 if (existingCustomerWithPhone.isPresent() &&
                         !existingCustomerWithPhone.get().getId().equals(userId)) {
@@ -250,27 +295,39 @@ public class ApplicationService {
                 }
             }
 
-            // Fetch user
-            User user = userRepo.findById(userId)
+            // Fetch existing customer
+            Customer customer = customerRepo.findById(userId)
                     .orElseThrow(() -> new RuntimeException("No user found"));
 
-            // Use helper method for cleaner field updates
-            user.setFirstName(reUsableFunctions.getUpdatedValue(updateUserProfile.getFirstName(), user.getFirstName()));
-            user.setLastName(reUsableFunctions.getUpdatedValue(updateUserProfile.getLastName(), user.getLastName()));
-            user.setStreetAddress(reUsableFunctions.getUpdatedValue(updateUserProfile.getStreetAddress(), user.getStreetAddress()));
-            user.setCountry(reUsableFunctions.getUpdatedValue(updateUserProfile.getCountry(), user.getCountry()));
-            user.setPostalCode(reUsableFunctions.getUpdatedValue(updateUserProfile.getPostalCode(), user.getPostalCode()));
-            user.setProvince(reUsableFunctions.getUpdatedValue(updateUserProfile.getProvince(), user.getProvince()));
-            user.setApartmentNumber(reUsableFunctions.getUpdatedValue(updateUserProfile.getApartmentNumber(), user.getApartmentNumber()));
-            user.setCity(reUsableFunctions.getUpdatedValue(updateUserProfile.getCity(), user.getCity()));
-            user.setPhoneNumber(reUsableFunctions.getUpdatedValue(updateUserProfile.getPhoneNumber(), user.getPhoneNumber()));
-            user.setUpdatedAt(LocalDateTime.now());
+            // Update basic fields
+            customer.setFirstName(reUsableFunctions.getUpdatedValue(editCustomer.getFirstName(), customer.getFirstName()));
+            customer.setLastName(reUsableFunctions.getUpdatedValue(editCustomer.getLastName(), customer.getLastName()));
+            customer.setPhoneNumber(reUsableFunctions.getUpdatedValue(editCustomer.getPhoneNumber(), customer.getPhoneNumber()));
+            customer.setUpdatedAt(LocalDateTime.now());
 
-            userRepo.save(user);
+            // Update address correctly — use existing address
+            if (customer.getAddress() != null && editCustomer.getAddress() != null) {
+                Address address = customer.getAddress();
+                EditAddress dto = editCustomer.getAddress();
+
+                address.setStreetAddress(reUsableFunctions.getUpdatedValue(dto.getStreetAddress(), address.getStreetAddress()));
+                address.setCountry(reUsableFunctions.getUpdatedValue(dto.getCountry(), address.getCountry()));
+                address.setPostalCode(reUsableFunctions.getUpdatedValue(dto.getPostalCode(), address.getPostalCode()));
+                address.setProvince(reUsableFunctions.getUpdatedValue(dto.getProvince(), address.getProvince()));
+                address.setApartmentNumber(reUsableFunctions.getUpdatedValue(dto.getApartmentNumber(), address.getApartmentNumber()));
+                address.setCity(reUsableFunctions.getUpdatedValue(dto.getCity(), address.getCity()));
+            }
+
+            userRepo.save(customer);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("User updated successfully");
-            baseResponse.setData(EMPTY_DATA);
+            baseResponse.setData(Map.of(
+                    "CustomerId", customer.getCustomerId(),
+                    "email", customer.getEmail(),
+                    "First Name", customer.getFirstName(),
+                    "Last Name", customer.getLastName()
+            ));
 
         } catch (Exception e) {
             baseResponse.setStatusCode(ERROR_STATUS_CODE);
@@ -284,54 +341,88 @@ public class ApplicationService {
 
     //........................VENDOR SERVICE................................. //
 
-    public BaseResponse createVendorAccount(VendorProfileData vendorProfileData) {
+    public BaseResponse createVendorAccount(VendorRegistration vendorRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
+
         try {
             // Check if email already exists
-            Optional<Vendor> sellerEmailExist = vendorRepo.findByEmailAddress(vendorProfileData.getEmailAddress());
+            Optional<User> sellerEmailExist = userRepo.findByEmail(vendorRegistration.getEmail());
             if (sellerEmailExist.isPresent()) {
                 baseResponse.setStatusCode("409");
-                baseResponse.setMessage("Email Address already exist, kindly register with another email or login");
+                baseResponse.setMessage("Email Address already exists, kindly register with another email or login");
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
             // Check if phone number already exists
-            Optional<Vendor> sellerPhoneExist = vendorRepo.findByPhoneNumber(vendorProfileData.getPhoneNumber());
+            Optional<User> sellerPhoneExist = userRepo.findByPhoneNumber(vendorRegistration.getPhoneNumber());
             if (sellerPhoneExist.isPresent()) {
                 baseResponse.setStatusCode("409");
-                baseResponse.setMessage("Phone Number already exist, Kindly register with another phone number or login");
+                baseResponse.setMessage("Phone Number already exists, kindly register with another phone number or login");
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
+            String frontUrl = null;
+            String backUrl = null;
+            String logoUrl = null;
 
-            // Create new seller account
+            if (vendorRegistration.getIdCardFrontFile() != null && !vendorRegistration.getIdCardFrontFile().isEmpty()) {
+                frontUrl = fileStorageService.saveFile(vendorRegistration.getIdCardFrontFile());
+            }
+
+            if (vendorRegistration.getIdCardBackFile() != null && !vendorRegistration.getIdCardBackFile().isEmpty()) {
+                backUrl = fileStorageService.saveFile(vendorRegistration.getIdCardBackFile());
+            }
+
+            if (vendorRegistration.getBusinessLogoFile() != null && !vendorRegistration.getBusinessLogoFile().isEmpty()) {
+                logoUrl = fileStorageService.saveFile(vendorRegistration.getBusinessLogoFile());
+            }
+
+            // Create new vendor account
             Vendor vendor = new Vendor();
+            vendor.setVendorId(reUsableFunctions.generateId(vendorRegistration.getLastName()));
+            vendor.setUserId(reUsableFunctions.generateId(vendorRegistration.getFirstName()));
+            vendor.setFirstName(vendorRegistration.getFirstName());
+            vendor.setLastName(vendorRegistration.getLastName());
+            vendor.setEmail(vendorRegistration.getEmail());
+            vendor.setPhoneNumber(vendorRegistration.getPhoneNumber());
+            vendor.setPassword(reUsableFunctions.encryptPassword(vendorRegistration.getPassword()));
+            vendor.setBusinessLicenseNumber(vendorRegistration.getBusinessLicenseNumber());
+            vendor.setBusinessName(vendorRegistration.getBusinessName());
+            vendor.setTaxId(vendorRegistration.getTaxId());
+            vendor.setIdCardFrontUrl(frontUrl);
+            vendor.setIdCardBackUrl(backUrl);
+            vendor.setBusinessLogoUrl(logoUrl);
 
-            vendor.setVendorId(reUsableFunctions.generateId(vendorProfileData.getLastName()));
-            vendor.setFirstName(vendorProfileData.getFirstName());
-            vendor.setLastName(vendorProfileData.getLastName());
-            vendor.setEmailAddress(vendorProfileData.getEmailAddress());
-            vendor.setPhoneNumber(vendorProfileData.getPhoneNumber());
-            vendor.setApartmentNumber(vendorProfileData.getApartmentNumber());
-            vendor.setStreetAddress(vendorProfileData.getStreetAddress());
-            vendor.setCountry(vendorProfileData.getCountry());
-            vendor.setCity(vendorProfileData.getCity());
-            vendor.setPassword(reUsableFunctions.encryptPassword(vendorProfileData.getPassword()));
-            vendor.setIdCardBack(vendorProfileData.getIdCardBack());
-            vendor.setIdCardFront(vendorProfileData.getIdCardFront());
-            vendor.setProfilePhoto(vendorProfileData.getProfilePhoto());
-            vendor.setPostalCode(vendorProfileData.getPostalCode());
-            vendor.setProvince(vendorProfileData.getProvince());
-
+            // Set address if provided
+            if (vendorRegistration.getAddress() != null) {
+                Address address = new Address();
+                address.setApartmentNumber(vendorRegistration.getAddress().getApartmentNumber());
+                address.setStreetAddress(vendorRegistration.getAddress().getStreetAddress());
+                address.setCountry(vendorRegistration.getAddress().getCountry());
+                address.setCity(vendorRegistration.getAddress().getCity());
+                address.setPostalCode(vendorRegistration.getAddress().getPostalCode());
+                address.setProvince(vendorRegistration.getAddress().getProvince());
+                vendor.setAddress(address);
+            }
 
             vendorRepo.save(vendor);
 
-            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-            baseResponse.setMessage("Vendor Account created successfully.");
-            baseResponse.setData(EMPTY_DATA);
 
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Vendor account created successfully.");
+            baseResponse.setData(Map.of(
+                    "vendorId", vendor.getVendorId(),
+                    "email", vendor.getEmail(),
+                    "businessName", vendor.getBusinessName()
+            ));
+
+        } catch (IOException e) {
+            // Specific file saving failure
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("File upload failed: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
             baseResponse.setMessage("An error occurred: " + e.getMessage());
@@ -352,18 +443,31 @@ public class ApplicationService {
             for (Vendor vendor : fetchAllSellers) {
                 VendorDTO vendorDTO = new VendorDTO();
 
+                vendorDTO.setUserId(vendor.getUserId());
                 vendorDTO.setVendorId(vendor.getVendorId());
                 vendorDTO.setFirstName(vendor.getFirstName());
                 vendorDTO.setLastName(vendor.getLastName());
-                vendorDTO.setEmailAddress(vendor.getEmailAddress());
-                vendorDTO.setCountry(vendor.getCountry());
-                vendorDTO.setStreetAddress(vendor.getStreetAddress());
-                vendorDTO.setApartmentNumber(vendor.getApartmentNumber());
-                vendorDTO.setProvince(vendor.getProvince());
-                vendorDTO.setCity(vendor.getCity());
-                vendorDTO.setPostalCode(vendor.getPostalCode());
                 vendorDTO.setPhoneNumber(vendor.getPhoneNumber());
-                vendorDTO.setProfilePhoto(vendor.getProfilePhoto());
+                vendorDTO.setEmail(vendor.getEmail());
+                vendorDTO.setBusinessName(vendor.getBusinessName());
+                vendorDTO.setBusinessLogoUrl(vendor.getBusinessLogoUrl());
+                vendorDTO.setTaxId(vendor.getTaxId());
+                vendorDTO.setBusinessLicenseNumber(vendor.getBusinessLicenseNumber());
+                vendorDTO.setIdCardBackUrl(vendor.getIdCardBackUrl());
+                vendorDTO.setIdCardFrontUrl(vendor.getIdCardFrontUrl());
+
+                if (vendor.getAddress() != null) {
+                    AddressDTO addressDTO = new AddressDTO();
+                    addressDTO.setCountry(vendor.getAddress().getCountry());
+                    addressDTO.setStreetAddress(vendor.getAddress().getStreetAddress());
+                    addressDTO.setApartmentNumber(vendor.getAddress().getApartmentNumber());
+                    addressDTO.setProvince(vendor.getAddress().getProvince());
+                    addressDTO.setCity(vendor.getAddress().getCity());
+                    addressDTO.setPostalCode(vendor.getAddress().getPostalCode());
+
+                    vendorDTO.setAddress(addressDTO);
+                }
+
 
                 sellerResult.add(vendorDTO);
 
@@ -384,8 +488,8 @@ public class ApplicationService {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(vendorId);
-            if(getBusinessOwnerDetails.isEmpty()) {
+            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorId(vendorId);
+            if (getVendorDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Business Owner Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
@@ -394,23 +498,36 @@ public class ApplicationService {
 
             }
 
-            Vendor vendor = getBusinessOwnerDetails.get();
+            Vendor vendor = getVendorDetails.get();
 
 
             VendorDTO vendorDTO = new VendorDTO();
 
+
+            vendorDTO.setUserId(vendor.getUserId());
             vendorDTO.setVendorId(vendor.getVendorId());
             vendorDTO.setFirstName(vendor.getFirstName());
             vendorDTO.setLastName(vendor.getLastName());
-            vendorDTO.setEmailAddress(vendor.getEmailAddress());
-            vendorDTO.setCountry(vendor.getCountry());
-            vendorDTO.setStreetAddress(vendor.getStreetAddress());
-            vendorDTO.setApartmentNumber(vendor.getApartmentNumber());
-            vendorDTO.setProvince(vendor.getProvince());
-            vendorDTO.setCity(vendor.getCity());
-            vendorDTO.setPostalCode(vendor.getPostalCode());
             vendorDTO.setPhoneNumber(vendor.getPhoneNumber());
-            vendorDTO.setProfilePhoto(vendor.getProfilePhoto());
+            vendorDTO.setEmail(vendor.getEmail());
+            vendorDTO.setBusinessName(vendor.getBusinessName());
+            vendorDTO.setBusinessLogoUrl(vendor.getBusinessLogoUrl());
+            vendorDTO.setTaxId(vendor.getTaxId());
+            vendorDTO.setBusinessLicenseNumber(vendor.getBusinessLicenseNumber());
+            vendorDTO.setIdCardBackUrl(vendor.getIdCardBackUrl());
+            vendorDTO.setIdCardFrontUrl(vendor.getIdCardFrontUrl());
+
+            if (vendor.getAddress() != null) {
+                AddressDTO addressDTO = new AddressDTO();
+                addressDTO.setCountry(vendor.getAddress().getCountry());
+                addressDTO.setStreetAddress(vendor.getAddress().getStreetAddress());
+                addressDTO.setApartmentNumber(vendor.getAddress().getApartmentNumber());
+                addressDTO.setProvince(vendor.getAddress().getProvince());
+                addressDTO.setCity(vendor.getAddress().getCity());
+                addressDTO.setPostalCode(vendor.getAddress().getPostalCode());
+
+                vendorDTO.setAddress(addressDTO);
+            }
 
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
@@ -429,13 +546,13 @@ public class ApplicationService {
 
     }
 
-    public BaseResponse editVendor(UpdateVendorProfile updateVendorProfile) {
+    public BaseResponse editVendor(EditVendor editVendor) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
 
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(updateVendorProfile.getBusinessOwnerId());
-            if(getBusinessOwnerDetails.isEmpty()) {
+            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(editVendor.getVendorId());
+            if (getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Vendor Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
@@ -447,11 +564,11 @@ public class ApplicationService {
             Vendor vendor = getBusinessOwnerDetails.get();
 
 
-            String newPhoneNumber = updateVendorProfile.getPhoneNumber();
+            String newPhoneNumber = editVendor.getPhoneNumber();
 
             if (newPhoneNumber != null && !newPhoneNumber.trim().isEmpty()) {
                 Optional<Vendor> existingSellerWithPhone = vendorRepo.findByPhoneNumber(newPhoneNumber.trim());
-                if (existingSellerWithPhone.isPresent() && !Objects.equals(vendor.getPhoneNumber(),newPhoneNumber)) {
+                if (existingSellerWithPhone.isPresent() && !Objects.equals(vendor.getPhoneNumber(), newPhoneNumber)) {
                     baseResponse.setStatusCode(ERROR_STATUS_CODE);
                     baseResponse.setMessage("Phone number already exists");
                     baseResponse.setData(EMPTY_DATA);
@@ -460,25 +577,61 @@ public class ApplicationService {
                 vendor.setPhoneNumber(newPhoneNumber.trim());
             }
 
+            // Save uploaded files (if provided)
+            String frontUrl = null;
+            String backUrl = null;
+            String logoUrl = null;
+
+            if (editVendor.getIdCardFrontFile() != null && !editVendor.getIdCardFrontFile().isEmpty()) {
+                frontUrl = fileStorageService.saveFile(editVendor.getIdCardFrontFile());
+            }
+
+            if (editVendor.getIdCardBackFile() != null && !editVendor.getIdCardBackFile().isEmpty()) {
+                backUrl = fileStorageService.saveFile(editVendor.getIdCardBackFile());
+            }
+
+            if (editVendor.getBusinessLogoFile() != null && !editVendor.getBusinessLogoFile().isEmpty()) {
+                logoUrl = fileStorageService.saveFile(editVendor.getBusinessLogoFile());
+            }
+
             // Conditionally update other fields
-            vendor.setFirstName(reUsableFunctions.getUpdatedValue(updateVendorProfile.getFirstName(), vendor.getFirstName()));
-            vendor.setLastName(reUsableFunctions.getUpdatedValue(updateVendorProfile.getLastName(), vendor.getLastName()));
-            vendor.setStreetAddress(reUsableFunctions.getUpdatedValue(updateVendorProfile.getStreetAddress(), vendor.getStreetAddress()));
-            vendor.setCountry(reUsableFunctions.getUpdatedValue(updateVendorProfile.getCountry(), vendor.getCountry()));
-            vendor.setPostalCode(reUsableFunctions.getUpdatedValue(updateVendorProfile.getPostalCode(), vendor.getPostalCode()));
-            vendor.setProvince(reUsableFunctions.getUpdatedValue(updateVendorProfile.getProvince(), vendor.getProvince()));
-            vendor.setApartmentNumber(reUsableFunctions.getUpdatedValue(updateVendorProfile.getApartmentNumber(), vendor.getApartmentNumber()));
-            vendor.setCity(reUsableFunctions.getUpdatedValue(updateVendorProfile.getCity(), vendor.getCity()));
-            vendor.setIdCardFront(reUsableFunctions.getUpdatedValue(updateVendorProfile.getIdCardFront(), vendor.getIdCardFront()));
-            vendor.setIdCardBack(reUsableFunctions.getUpdatedValue(updateVendorProfile.getIdCardBack(), vendor.getIdCardBack()));
-            vendor.setProfilePhoto(reUsableFunctions.getUpdatedValue(updateVendorProfile.getProfilePhoto(), vendor.getProfilePhoto()));
+            vendor.setUserId(reUsableFunctions.getUpdatedValue(editVendor.getUserId(), vendor.getUserId()));
+            vendor.setVendorId(reUsableFunctions.getUpdatedValue(editVendor.getVendorId(), vendor.getPhoneNumber()));
+            vendor.setPhoneNumber(reUsableFunctions.getUpdatedValue(editVendor.getPhoneNumber(), vendor.getFirstName()));
+            vendor.setFirstName(reUsableFunctions.getUpdatedValue(editVendor.getFirstName(), vendor.getFirstName()));
+            vendor.setLastName(reUsableFunctions.getUpdatedValue(editVendor.getLastName(), vendor.getLastName()));
+            vendor.setBusinessName(reUsableFunctions.getUpdatedValue(editVendor.getBusinessName(), vendor.getBusinessName()));
+            vendor.setTaxId(reUsableFunctions.getUpdatedValue(editVendor.getTaxId(), vendor.getTaxId()));
+            vendor.setBusinessLogoUrl(reUsableFunctions.getUpdatedValue(logoUrl, vendor.getBusinessLogoUrl()));
+            vendor.setBusinessLicenseNumber(reUsableFunctions.getUpdatedValue(editVendor.getBusinessLicenseNumber(), vendor.getBusinessLicenseNumber()));
+            vendor.setIdCardBackUrl(reUsableFunctions.getUpdatedValue(backUrl, vendor.getIdCardBackUrl()));
+            vendor.setIdCardFrontUrl(reUsableFunctions.getUpdatedValue(frontUrl, vendor.getIdCardFrontUrl()));
+
+            if (vendor.getAddress() != null && editVendor.getAddress() != null) {
+                Address address = vendor.getAddress();
+                EditAddress dto = editVendor.getAddress();
+
+                address.setStreetAddress(reUsableFunctions.getUpdatedValue(dto.getStreetAddress(), address.getStreetAddress()));
+                address.setCountry(reUsableFunctions.getUpdatedValue(dto.getCountry(), address.getCountry()));
+                address.setPostalCode(reUsableFunctions.getUpdatedValue(dto.getPostalCode(), address.getPostalCode()));
+                address.setProvince(reUsableFunctions.getUpdatedValue(dto.getProvince(), address.getProvince()));
+                address.setApartmentNumber(reUsableFunctions.getUpdatedValue(dto.getApartmentNumber(), address.getApartmentNumber()));
+                address.setCity(reUsableFunctions.getUpdatedValue(dto.getCity(), address.getCity()));
+            }
+
             vendor.setUpdatedAt(LocalDateTime.now());
 
             vendorRepo.save(vendor);
 
             baseResponse.setMessage(SUCCESS_MESSAGE);
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-            baseResponse.setData(EMPTY_DATA);
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Vendor account created successfully.");
+            baseResponse.setData(Map.of(
+                    "vendorId", vendor.getVendorId(),
+                    "email", vendor.getEmail(),
+                    "businessName", vendor.getBusinessName()
+            ));
 
         } catch (Exception e) {
             baseResponse.setStatusCode(ERROR_STATUS_CODE);
@@ -494,7 +647,7 @@ public class ApplicationService {
 
         try {
             Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(vendorId);
-            if(getBusinessOwnerDetails.isEmpty()) {
+            if (getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Vendor Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
@@ -521,17 +674,15 @@ public class ApplicationService {
     }
 
 
-
-
     //........................CREATING STORE INFORMATION SERVICE................................. //
 
-    public BaseResponse createStore(StoreData storeData) {
+    public BaseResponse createStore(StoreRegistration storeRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
 
-            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorId(storeData.getVendorId());
-            if(getVendorDetails.isEmpty()) {
+            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorId(storeRegistration.getVendorId());
+            if (getVendorDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Business Owner Id does not Exist");
                 baseResponse.setData(EMPTY_DATA);
@@ -540,44 +691,66 @@ public class ApplicationService {
 
             }
 
-            List<Store> checkStoreName = storeRepo.findStoreByStoreNameIgnoreCase(storeData.getStoreName());
-            if(!checkStoreName.isEmpty()) {
-                baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("Store Name not available");
+            List<Store> checkStoreName = storeRepo.findStoreByStoreNameIgnoreCase(storeRegistration.getStoreName());
+            if (!checkStoreName.isEmpty()) {
+                baseResponse.setStatusCode("409");
+                baseResponse.setMessage("Store Name exist for another user");
                 baseResponse.setData(EMPTY_DATA);
 
                 return baseResponse;
             }
 
 
+            // Save uploaded files (if provided)
+            String storeLogo = null;
+
+
+            if (storeRegistration.getStoreLogo() != null && !storeRegistration.getStoreLogo().isEmpty()) {
+                storeLogo = fileStorageService.saveFile(storeRegistration.getStoreLogo());
+            }
+
 
             Vendor vendor = getVendorDetails.get();
-           
+
 
             Store newStore = new Store();
 
-            newStore.setStoreId(reUsableFunctions.generateId(storeData.getStoreName()));
+            newStore.setStoreCode(reUsableFunctions.generateId(storeRegistration.getStoreName()));
             newStore.setVendor(vendor);
-            newStore.setStoreLogo(storeData.getStoreLogo());
-            newStore.setStoreName(storeData.getStoreName());
-            newStore.setStoreDescription(storeData.getStoreDescription());
-            newStore.setStreetAddress(storeData.getStreetAddress());
-            newStore.setStoreCity(storeData.getStoreCity());
-            newStore.setStoreCountry(storeData.getStoreCountry());
-            newStore.setStorePostalCode(storeData.getStorePostalCode());
-            newStore.setStoreProvince(storeData.getStoreProvince());
+            newStore.setVendorCode(vendor.getVendorId());
+            newStore.setStoreLogo(storeLogo);
+            newStore.setStoreName(storeRegistration.getStoreName());
+            newStore.setStoreDescription(storeRegistration.getStoreDescription());
+            newStore.setMaxDeliveryDistance(storeRegistration.getMaxDeliveryDistance());
+            newStore.setPickupAvailable(Boolean.TRUE.equals(storeRegistration.getPickupAvailable()));
+            newStore.setDeliveryAvailable(Boolean.TRUE.equals(storeRegistration.getDeliveryAvailable()));
+            newStore.setStoreOpeningHours(LocalTime.parse(storeRegistration.getStoreOpeningHours()));
+            newStore.setStoreClosingHours(LocalTime.parse(storeRegistration.getStoreClosingHours()));
             newStore.setStorePhoneNumber(vendor.getPhoneNumber());
-            newStore.setStoreCategory(storeData.getStoreCategory());
-            newStore.setStoreHours(storeData.getStoreHours());
-            newStore.setMaxDeliveryDistance(storeData.getMaxDeliveryDistance());
-            newStore.setPickupAvailable(Boolean.TRUE.equals(storeData.getPickupAvailable()));
-            newStore.setDeliveryAvailable(Boolean.TRUE.equals(storeData.getDeliveryAvailable()));
+            newStore.setStoreCategory(storeRegistration.getStoreCategory());
+
+
+            Address address = new Address();
+            if (storeRegistration.getAddress() != null) {
+                address.setApartmentNumber(storeRegistration.getAddress().getApartmentNumber());
+                address.setStreetAddress(storeRegistration.getAddress().getStreetAddress());
+                address.setCountry(storeRegistration.getAddress().getCountry());
+                address.setCity(storeRegistration.getAddress().getCity());
+                address.setPostalCode(storeRegistration.getAddress().getPostalCode());
+                address.setProvince(storeRegistration.getAddress().getProvince());
+            }
+            vendor.setAddress(address);
+
 
             storeRepo.save(newStore);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Store created successfully.");
-            baseResponse.setData(EMPTY_DATA);
+            baseResponse.setData(Map.of(
+                    "StoreId", newStore.getStoreCode(),
+                    "Vendor Code", newStore.getVendorCode(),
+                    "Store Name", newStore.getStoreName()
+            ));
 
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
@@ -588,12 +761,12 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse updateStore(UpdatedStoreData updatedStoreData) {
+    public BaseResponse updateStore(EditStore editStore) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> businessOwner = vendorRepo.findByVendorId(updatedStoreData.getBusinessOwnerId());
-            Optional<Store> getStore = storeRepo.findByStoreId(updatedStoreData.getStoreId());
+            Optional<Vendor> businessOwner = vendorRepo.findByVendorId(editStore.getVendorId());
+            Optional<Store> getStore = storeRepo.findByStoreCode(editStore.getStoreCode());
 
             if (getStore.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
@@ -602,27 +775,51 @@ public class ApplicationService {
                 return baseResponse;
             }
 
+            // Save uploaded files (if provided)
+            String storeLogo = null;
+
+
+            if (editStore.getStoreLogo() != null && !editStore.getStoreLogo().isEmpty()) {
+                storeLogo = fileStorageService.saveFile(editStore.getStoreLogo());
+            }
+
+
             Store store = getStore.get();
 
-            store.setStoreName(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreName(), store.getStoreName()));
-            store.setStoreLogo(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreLogo(), store.getStoreLogo()));
-            store.setStoreDescription(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreDescription(), store.getStoreDescription()));
-            store.setStreetAddress(reUsableFunctions.getUpdatedValue(updatedStoreData.getStreetAddress(), store.getStreetAddress()));
-            store.setStoreCity(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreCity(), store.getStoreCity()));
-            store.setStorePostalCode(reUsableFunctions.getUpdatedValue(updatedStoreData.getStorePostalCode(), store.getStorePostalCode()));
-            store.setStoreCountry(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreCountry(), store.getStoreCountry()));
-            store.setStoreCategory(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreCategory(), store.getStoreCategory()));
-            store.setStoreHours(reUsableFunctions.getUpdatedValue(updatedStoreData.getStoreHours(), store.getStoreHours()));
-            store.setMaxDeliveryDistance(reUsableFunctions.getUpdatedValue(updatedStoreData.getMaxDeliveryDistance(), store.getMaxDeliveryDistance()));
-            store.setPickupAvailable(reUsableFunctions.getUpdatedValueBoolean(updatedStoreData.isPickupAvailable(), store.isPickupAvailable()));
-            store.setDeliveryAvailable(reUsableFunctions.getUpdatedValueBoolean(updatedStoreData.isDeliveryAvailable(), store.isDeliveryAvailable()));
+            store.setStoreName(reUsableFunctions.getUpdatedValue(editStore.getStoreName(), store.getStoreName()));
+            store.setStoreLogo(reUsableFunctions.getUpdatedValue(storeLogo, store.getStoreLogo()));
+            store.setStoreDescription(reUsableFunctions.getUpdatedValue(editStore.getStoreDescription(), store.getStoreDescription()));
+            store.setMaxDeliveryDistance(reUsableFunctions.getUpdatedValue(editStore.getMaxDeliveryDistance(), store.getMaxDeliveryDistance()));
+            store.setPickupAvailable(reUsableFunctions.getUpdatedValueBoolean(editStore.isPickupAvailable(), store.isPickupAvailable()));
+            store.setDeliveryAvailable(reUsableFunctions.getUpdatedValueBoolean(editStore.isDeliveryAvailable(), store.isDeliveryAvailable()));
+            store.setStoreCategory(reUsableFunctions.getUpdatedValue(editStore.getStoreCategory(), store.getStoreCategory()));
+            store.setStoreOpeningHours(LocalTime.parse(reUsableFunctions.getUpdatedValue(editStore.getStoreOpeningHours(), String.valueOf(store.getStoreOpeningHours()))));
+            store.setStoreClosingHours(LocalTime.parse(reUsableFunctions.getUpdatedValue(editStore.getStoreClosingHours(), String.valueOf(store.getStoreClosingHours()))));
             store.setUpdatedAt(LocalDateTime.now());
+
+
+            if (store.getAddress() != null && editStore.getAddress() != null) {
+                Address address = store.getAddress();
+                EditAddress dto = editStore.getAddress();
+
+                address.setStreetAddress(reUsableFunctions.getUpdatedValue(dto.getStreetAddress(), address.getStreetAddress()));
+                address.setCountry(reUsableFunctions.getUpdatedValue(dto.getCountry(), address.getCountry()));
+                address.setPostalCode(reUsableFunctions.getUpdatedValue(dto.getPostalCode(), address.getPostalCode()));
+                address.setProvince(reUsableFunctions.getUpdatedValue(dto.getProvince(), address.getProvince()));
+                address.setApartmentNumber(reUsableFunctions.getUpdatedValue(dto.getApartmentNumber(), address.getApartmentNumber()));
+                address.setCity(reUsableFunctions.getUpdatedValue(dto.getCity(), address.getCity()));
+            }
+
 
             storeRepo.save(store);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Store updated successfully");
-            baseResponse.setData(store);
+            baseResponse.setData(Map.of(
+                    "StoreId", store.getStoreCode(),
+                    "Vendor Code", store.getVendorCode(),
+                    "Store Name", store.getStoreName()
+            ));
 
         } catch (Exception e) {
             baseResponse.setStatusCode(ERROR_STATUS_CODE);
@@ -633,37 +830,37 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse deleteStore(String storeId){
+    public BaseResponse deleteStore(String storeCode) {
 
         BaseResponse baseResponse = new BaseResponse(true);
 
-     try {
+        try {
 
-         Optional<Store> getStore = storeRepo.findByStoreId(storeId);
+            Optional<Store> getStore = storeRepo.findByStoreCode(storeCode);
 
-         if (getStore.isEmpty()){
-             baseResponse.setStatusCode(ERROR_STATUS_CODE);
-             baseResponse.setMessage("Store ID empty");
-             baseResponse.setData(EMPTY_DATA);
+            if (getStore.isEmpty()) {
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Store ID empty");
+                baseResponse.setData(EMPTY_DATA);
 
-             return baseResponse;
-         }
+                return baseResponse;
+            }
 
-                Store store = getStore.get();
+            Store store = getStore.get();
 
-                storeRepo.delete(store);
+            storeRepo.delete(store);
 
-           baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-           baseResponse.setMessage(SUCCESS_MESSAGE);
-           baseResponse.setData(EMPTY_DATA);
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage(SUCCESS_MESSAGE);
+            baseResponse.setData(EMPTY_DATA);
 
-     } catch (Exception e) {
-         baseResponse.setStatusCode(ERROR_STATUS_CODE);
-         baseResponse.setMessage("An error occur " + e.getMessage());
-         baseResponse.setData(EMPTY_DATA);
-     }
+        } catch (Exception e) {
+            baseResponse.setStatusCode(ERROR_STATUS_CODE);
+            baseResponse.setMessage("An error occur " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+        }
 
-     return baseResponse;
+        return baseResponse;
     }
 
     public BaseResponse getStoresByFilter(String storeCategory, String storeName) {
@@ -674,8 +871,9 @@ public class ApplicationService {
             List<Store> stores;
 
             if ((storeCategory == null || storeCategory.isEmpty()) &&
-                    (storeName == null || storeName.isEmpty())) {
-                stores = storeRepo.findAllByOrderByStoreIdDesc();
+                    (storeName == null || storeName.isEmpty()))
+            {
+                stores = storeRepo.findAllByOrderByProductCodeDesc();
             } else if ((storeCategory != null && !storeCategory.isEmpty()) &&
                     (storeName != null && !storeName.isEmpty())) {
                 stores = storeRepo.findByStoreCategoryContainingIgnoreCaseAndStoreNameContainingIgnoreCase(
@@ -690,20 +888,31 @@ public class ApplicationService {
             for (Store store : stores) {
                 StoreDto storeDto = new StoreDto();
 
-                storeDto.setStoreId(store.getStoreId());
+                storeDto.setStoreId(store.getStoreCode());
                 storeDto.setStoreLogo(store.getStoreLogo());
                 storeDto.setStoreName(store.getStoreName());
                 storeDto.setStoreCategory(store.getStoreCategory());
                 storeDto.setStoreDescription(store.getStoreDescription());
-                storeDto.setStreetAddress(store.getStreetAddress());
-                storeDto.setStoreCity(store.getStoreCity());
-                storeDto.setStoreCountry(store.getStoreCountry());
-                storeDto.setStoreHours(store.getStoreHours());
                 storeDto.setStorePhoneNumber(store.getStorePhoneNumber());
                 storeDto.setDeliveryAvailable(store.isDeliveryAvailable());
                 storeDto.setPickupAvailable(store.isPickupAvailable());
-                storeDto.setStorePostalCode(store.getStorePostalCode());
                 storeDto.setMaxDeliveryDistance(store.getMaxDeliveryDistance());
+                storeDto.setStoreClosingHours(String.valueOf(store.getStoreClosingHours()));
+                storeDto.setStoreOpeningHours(String.valueOf(store.getStoreOpeningHours()));
+
+
+                if (store.getAddress() != null) {
+                    AddressDTO addressDTO = new AddressDTO();
+                    addressDTO.setCountry(store.getAddress().getCountry());
+                    addressDTO.setStreetAddress(store.getAddress().getStreetAddress());
+                    addressDTO.setApartmentNumber(store.getAddress().getApartmentNumber());
+                    addressDTO.setProvince(store.getAddress().getProvince());
+                    addressDTO.setCity(store.getAddress().getCity());
+                    addressDTO.setPostalCode(store.getAddress().getPostalCode());
+
+                    storeDto.setAddress(addressDTO);
+                }
+
 
                 allStoreResult.add(storeDto);
             }
@@ -721,51 +930,63 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getStoreById (String storeId) {
+    public BaseResponse getStoreById(String storeCode) {
         BaseResponse baseResponse = new BaseResponse(true);
 
-     try{
-         Optional<Store> fetchStore = storeRepo.findByStoreId(storeId);
+        try {
+            Optional<Store> fetchStore = storeRepo.findByStoreCode(storeCode);
 
-         if (fetchStore.isEmpty()){
-             baseResponse.setStatusCode(ERROR_STATUS_CODE);
-             baseResponse.setMessage("Store Id Empty or Does Not Exist");
-             baseResponse.setData(EMPTY_DATA);
+            if (fetchStore.isEmpty()) {
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Store Id Empty or Does Not Exist");
+                baseResponse.setData(EMPTY_DATA);
 
-             return baseResponse;
-         }
+                return baseResponse;
+            }
 
             Store store = fetchStore.get();
             StoreDto storeDto = new StoreDto();
 
-         storeDto.setStoreLogo(store.getStoreLogo());
-         storeDto.setStoreName(store.getStoreName());
-         storeDto.setStoreCategory(store.getStoreCategory());
-         storeDto.setStoreDescription(store.getStoreDescription());
-         storeDto.setStreetAddress(store.getStreetAddress());
-         storeDto.setStoreCity(store.getStoreCity());
-         storeDto.setStoreCountry(store.getStoreCountry());
-         storeDto.setStoreHours(store.getStoreHours());
-         storeDto.setStorePhoneNumber(store.getStorePhoneNumber());
-         storeDto.setDeliveryAvailable(store.isDeliveryAvailable());
-         storeDto.setPickupAvailable(store.isPickupAvailable());
-         storeDto.setStorePostalCode(store.getStorePostalCode());
-         storeDto.setMaxDeliveryDistance(store.getMaxDeliveryDistance());
+            storeDto.setStoreId(store.getStoreCode());
+            storeDto.setStoreLogo(store.getStoreLogo());
+            storeDto.setStoreName(store.getStoreName());
+            storeDto.setStoreCategory(store.getStoreCategory());
+            storeDto.setStoreDescription(store.getStoreDescription());
+            storeDto.setStorePhoneNumber(store.getStorePhoneNumber());
+            storeDto.setDeliveryAvailable(store.isDeliveryAvailable());
+            storeDto.setPickupAvailable(store.isPickupAvailable());
+            storeDto.setMaxDeliveryDistance(store.getMaxDeliveryDistance());
+            storeDto.setStoreClosingHours(String.valueOf(store.getStoreClosingHours()));
+            storeDto.setStoreOpeningHours(String.valueOf(store.getStoreOpeningHours()));
 
-         baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-         baseResponse.setMessage(SUCCESS_MESSAGE);
-         baseResponse.setData(storeDto);
 
-     } catch (Exception e) {
-          baseResponse.setStatusCode(ERROR_STATUS_CODE);
-          baseResponse.setMessage(ERROR_MESSAGE);
-          baseResponse.setData(EMPTY_DATA);
-     }
+            if (store.getAddress() != null) {
+                AddressDTO addressDTO = new AddressDTO();
+                addressDTO.setCountry(store.getAddress().getCountry());
+                addressDTO.setStreetAddress(store.getAddress().getStreetAddress());
+                addressDTO.setApartmentNumber(store.getAddress().getApartmentNumber());
+                addressDTO.setProvince(store.getAddress().getProvince());
+                addressDTO.setCity(store.getAddress().getCity());
+                addressDTO.setPostalCode(store.getAddress().getPostalCode());
+
+                storeDto.setAddress(addressDTO);
+            }
+
+
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage(SUCCESS_MESSAGE);
+            baseResponse.setData(storeDto);
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode(ERROR_STATUS_CODE);
+            baseResponse.setMessage(ERROR_MESSAGE);
+            baseResponse.setData(EMPTY_DATA);
+        }
 
         return baseResponse;
     }
 
-    public BaseResponse getStoreByKeyword (String keyword) {
+    public BaseResponse getStoreByKeyword(String keyword) {
 
         BaseResponse baseResponse = new BaseResponse(true);
 
@@ -775,29 +996,41 @@ public class ApplicationService {
 
             if (storeList.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage( "No store found with the keyword " + keyword);
+                baseResponse.setMessage("No store found with the keyword " + keyword);
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
 
-            for (Store store : storeList){
+            for (Store store : storeList) {
 
                 StoreDto storeDto = new StoreDto();
 
+                storeDto.setStoreId(store.getStoreCode());
                 storeDto.setStoreLogo(store.getStoreLogo());
                 storeDto.setStoreName(store.getStoreName());
                 storeDto.setStoreCategory(store.getStoreCategory());
                 storeDto.setStoreDescription(store.getStoreDescription());
-                storeDto.setStreetAddress(store.getStreetAddress());
-                storeDto.setStoreCity(store.getStoreCity());
-                storeDto.setStoreCountry(store.getStoreCountry());
-                storeDto.setStoreHours(store.getStoreHours());
                 storeDto.setStorePhoneNumber(store.getStorePhoneNumber());
                 storeDto.setDeliveryAvailable(store.isDeliveryAvailable());
                 storeDto.setPickupAvailable(store.isPickupAvailable());
-                storeDto.setStorePostalCode(store.getStorePostalCode());
                 storeDto.setMaxDeliveryDistance(store.getMaxDeliveryDistance());
+                storeDto.setStoreClosingHours(String.valueOf(store.getStoreClosingHours()));
+                storeDto.setStoreOpeningHours(String.valueOf(store.getStoreOpeningHours()));
+
+
+                if (store.getAddress() != null) {
+                    AddressDTO addressDTO = new AddressDTO();
+                    addressDTO.setCountry(store.getAddress().getCountry());
+                    addressDTO.setStreetAddress(store.getAddress().getStreetAddress());
+                    addressDTO.setApartmentNumber(store.getAddress().getApartmentNumber());
+                    addressDTO.setProvince(store.getAddress().getProvince());
+                    addressDTO.setCity(store.getAddress().getCity());
+                    addressDTO.setPostalCode(store.getAddress().getPostalCode());
+
+                    storeDto.setAddress(addressDTO);
+                }
+
 
                 allStoreResult.add(storeDto);
 
@@ -831,22 +1064,34 @@ public class ApplicationService {
             for (Store store : storeList) {
                 StoreDto storeDto = new StoreDto();
 
+                storeDto.setStoreId(store.getStoreCode());
                 storeDto.setStoreLogo(store.getStoreLogo());
                 storeDto.setStoreName(store.getStoreName());
                 storeDto.setStoreCategory(store.getStoreCategory());
                 storeDto.setStoreDescription(store.getStoreDescription());
-                storeDto.setStreetAddress(store.getStreetAddress());
-                storeDto.setStoreCity(store.getStoreCity());
-                storeDto.setStoreCountry(store.getStoreCountry());
-                storeDto.setStoreHours(store.getStoreHours());
                 storeDto.setStorePhoneNumber(store.getStorePhoneNumber());
                 storeDto.setDeliveryAvailable(store.isDeliveryAvailable());
                 storeDto.setPickupAvailable(store.isPickupAvailable());
-                storeDto.setStorePostalCode(store.getStorePostalCode());
                 storeDto.setMaxDeliveryDistance(store.getMaxDeliveryDistance());
+                storeDto.setStoreClosingHours(String.valueOf(store.getStoreClosingHours()));
+                storeDto.setStoreOpeningHours(String.valueOf(store.getStoreOpeningHours()));
+
+
+                if (store.getAddress() != null) {
+                    AddressDTO addressDTO = new AddressDTO();
+                    addressDTO.setCountry(store.getAddress().getCountry());
+                    addressDTO.setStreetAddress(store.getAddress().getStreetAddress());
+                    addressDTO.setApartmentNumber(store.getAddress().getApartmentNumber());
+                    addressDTO.setProvince(store.getAddress().getProvince());
+                    addressDTO.setCity(store.getAddress().getCity());
+                    addressDTO.setPostalCode(store.getAddress().getPostalCode());
+
+                    storeDto.setAddress(addressDTO);
+                }
 
                 allStoreResult.add(storeDto);
             }
+
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage(SUCCESS_MESSAGE);
@@ -862,41 +1107,54 @@ public class ApplicationService {
     }
 
 
-
 //    .............................Create Products.....................................................
 
-    public BaseResponse createProduct (ProductData productData){
-
+    public BaseResponse createProduct(ProductRegistration productRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-
-            Optional<Store> getStoreIdDetails = storeRepo.findByStoreId(productData.getStoreId());
-            if (getStoreIdDetails.isEmpty()){
+            Optional<Store> optionalStore = storeRepo.findByStoreCode(productRegistration.getStoreCode());
+            if (optionalStore.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("Store ID not Valid");
+                baseResponse.setMessage("Store ID not valid");
                 baseResponse.setData(EMPTY_DATA);
-
                 return baseResponse;
             }
 
-            Store store  = getStoreIdDetails.get();
+            // Save uploaded files (if provided)
+            String productImage = null;
+
+
+            if (productRegistration.getProductImage() != null && !productRegistration.getProductImage().isEmpty()) {
+                productImage = fileStorageService.saveFile(productRegistration.getProductImage());
+            }
+
+            Store store = optionalStore.get();
 
             Product registeredProduct = new Product();
+            registeredProduct.setProductCode(reUsableFunctions.generateId(productRegistration.getProductName()));
+            registeredProduct.setProductName(productRegistration.getProductName());
+            registeredProduct.setStoreCode(productRegistration.getStoreCode());
+            registeredProduct.setBasePrice(productRegistration.getBasePrice());
+            registeredProduct.setProductDescription(productRegistration.getProductDescription());
+            registeredProduct.setProductImage(productImage);
+            registeredProduct.setCategory(productRegistration.getProductCategory());
 
-            registeredProduct.setProductId(reUsableFunctions.generateId(productData.getProductName()));
-            registeredProduct.setStore(store);
-            registeredProduct.setProductName(productData.getProductName());
-            registeredProduct.setProductPrice(productData.getProductPrice());
-            registeredProduct.setProductDescription(productData.getProductDescription());
-            registeredProduct.setProductImage(productData.getProductImage());
+
+
+            registeredProduct.setVendor(store.getVendor());
+
+//            registeredProduct.addStore(store);
 
             productRepo.save(registeredProduct);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Product created successfully.");
-            baseResponse.setData(EMPTY_DATA);
-
+            baseResponse.setData(Map.of(
+                    "StoreCode", store.getStoreCode(),
+                    "Product Code", registeredProduct.getProductCode(),
+                    "Product Name", registeredProduct.getProductName()
+            ));
 
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
@@ -904,66 +1162,184 @@ public class ApplicationService {
             baseResponse.setData(EMPTY_DATA);
         }
 
-
         return baseResponse;
     }
 
 
-
-    public BaseResponse createBulkProduct (List<ProductData> productDataList) {
+    public BaseResponse createBulkProduct(List<ProductRegistration> productRegistrationList) {
         BaseResponse baseResponse = new BaseResponse();
 
         try {
-            if (productDataList == null || productDataList.isEmpty()) {
+            if (productRegistrationList == null || productRegistrationList.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Product list cannot be empty.");
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
-            String storeId = productDataList.get(0).getStoreId();
-            Optional<Store> getStoreIdDetails = storeRepo.findByStoreId(storeId);
-            if (getStoreIdDetails.isEmpty()) {
+            String storeCode = productRegistrationList.get(0).getStoreCode();
+            Optional<Store> optionalStore = storeRepo.findByStoreCode(storeCode);
+            if (optionalStore.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Store ID not valid.");
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
-            Store store = getStoreIdDetails.get();
+            Store store = optionalStore.get();
+            Vendor vendor = store.getVendor(); // Required for Product
+
             List<Product> productsToSave = new ArrayList<>();
 
-            for (ProductData data : productDataList) {
-                if (!storeId.equals(data.getStoreId())) {
+            for (ProductRegistration data : productRegistrationList) {
+                if (!storeCode.equals(data.getStoreCode())) {
                     continue;
                 }
+
+                // Save uploaded files (if provided)
+                String productImage = null;
+
+
+                if (data.getProductImage() != null && !data.getProductImage().isEmpty()) {
+                    productImage = fileStorageService.saveFile(data.getProductImage());
+                }
+
                 Product product = new Product();
-                product.setProductId(reUsableFunctions.generateId(data.getProductName()));
-                product.setStore(store);
+                product.setProductCode(reUsableFunctions.generateId(data.getProductName()));
                 product.setProductName(data.getProductName());
-                product.setProductPrice(data.getProductPrice());
+                product.setStoreCode(store.getStoreCode());
                 product.setProductDescription(data.getProductDescription());
-                product.setProductImage(data.getProductImage());
+                product.setProductImage(productImage);
+                product.setCategory(data.getProductCategory());
+                product.setBasePrice(data.getBasePrice());
+                product.setVendor(vendor);
+
+                // associate product to store
+                product.addStore(store);
 
                 productsToSave.add(product);
-            }
+
+
 
             productRepo.saveAll(productsToSave);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Products created successfully.");
+            baseResponse.setData(Map.of(
+                    "StoreId", product.getStoreCode(),
+                    "Product Code", product.getProductCode(),
+                    "Product Name", product.getProductName()
+            ));
+            }
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+        }
+
+        return baseResponse;
+    }
+
+    public BaseResponse editProduct(EditProduct editProduct) {
+        BaseResponse baseResponse = new BaseResponse(true);
+
+        try {
+            Optional<Product> existingProduct = productRepo.findProductByProductCode(editProduct.getProductCode());
+
+            if (existingProduct.isEmpty()) {
+                baseResponse.setStatusCode(ERROR_STATUS_CODE);
+                baseResponse.setMessage("Product not found");
+                baseResponse.setData(EMPTY_DATA);
+                return baseResponse;
+            }
+
+            // Save uploaded files (if provided)
+            String productImage = null;
+
+
+            if (editProduct.getProductImage() != null && !editProduct.getProductImage().isEmpty()) {
+                productImage = fileStorageService.saveFile(editProduct.getProductImage());
+            }
+
+
+            Product product = existingProduct.get();
+            // Update fields only if new values are provided
+            if (editProduct.getProductName() != null) {
+                product.setProductName(editProduct.getProductName());
+            }
+            if (editProduct.getProductDescription() != null) {
+                product.setProductDescription(editProduct.getProductDescription());
+            }
+            if (editProduct.getProductImage() != null) {
+                product.setProductImage(productImage);
+            }
+            if (editProduct.getCategory() != null) {
+                product.setCategory(editProduct.getCategory());
+            }
+            if (editProduct.getBasePrice() != null) {
+                product.setBasePrice(editProduct.getBasePrice());
+            }
+
+            productRepo.save(product);
+
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Product updated successfully.");
+            baseResponse.setData(Map.of(
+                    "StoreId", product.getStoreCode(),
+                    "Product Code", product.getProductCode(),
+                    "Product Name", product.getProductName()
+            ));
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+        }
+
+        return baseResponse;
+    }
+
+    public BaseResponse deleteProduct(String productCode) {
+        BaseResponse baseResponse = new BaseResponse(true);
+
+        try {
+            Optional<Product> existingProduct = productRepo.findProductByProductCode(productCode);
+
+            if (existingProduct.isEmpty()) {
+                baseResponse.setStatusCode("500");
+                baseResponse.setMessage("Product not found");
+                baseResponse.setData(EMPTY_DATA);
+                return baseResponse;
+            }
+
+            Product product = existingProduct.get();
+
+            productRepo.delete(product);
+
+            baseResponse.setStatusCode("200");
+            baseResponse.setMessage("Product deleted successfully");
             baseResponse.setData(EMPTY_DATA);
 
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
             baseResponse.setMessage("An error occurred: " + e.getMessage());
             baseResponse.setData(EMPTY_DATA);
-
         }
+
         return baseResponse;
     }
 
 
 
-}
 
+
+// ---------------------------------Admin API'S-----------------------------
+
+
+
+
+
+
+
+}
