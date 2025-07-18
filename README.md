@@ -9,24 +9,25 @@ This is a backend API for a food delivery application built with **Spring Boot**
 
 ## 🚀 Features
 
-
 ### 👤 User Management
-
-- User registration and profile management  
-- Password encryption using **MD5**  
-- Address and contact information storage
+- User registration, update, and deletion
+- Profile and address info management
+- Password encryption using **MD5** *(Consider replacing with BCrypt)*
 
 ### 🧑‍💼 Vendor Management
-
-- Vendor registration and profile management  
-- Store creation and management  
-- ID card and profile photo storage
+- Vendor account registration and updates
+- Upload ID card (front/back) and business logo
+- Manage store listings
 
 ### 🏪 Store Management
+- Register stores with location, category, operating hours
+- Update or delete store information
+- Filter or search by name, location, or category
 
-- Store creation with details like address, category, and operating hours  
-- Filter stores by category, name, location, or keyword  
-- Manage delivery and pickup availability
+### 📦 File Upload
+- Upload vendor media (ID cards, logo)
+- Upload product images
+- File storage handled via a custom `FileStorageService`
 
 ---
 
