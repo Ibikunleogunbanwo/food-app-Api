@@ -12,7 +12,7 @@ This is a backend API for a food delivery application built with **Spring Boot**
 ### 👤 User Management
 - User registration, update, and deletion
 - Profile and address info management
-- Password encryption using **MD5** *(Consider replacing with BCrypt)*
+- Password encryption 
 
 ### 🧑‍💼 Vendor Management
 - Vendor account registration and updates
