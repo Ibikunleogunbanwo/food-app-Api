@@ -21,14 +21,13 @@ public class EditVendor extends EditUser {
 
     private String taxId;
 
-    @Schema(description = "Front of ID card", type = "string", format = "binary")
-    private MultipartFile idCardFrontFile;
+    private String idCardFrontFile;
 
-    @Schema(description = "Back of ID card", type = "string", format = "binary")
-    private MultipartFile idCardBackFile;
 
-    @Schema(description = "Business logo", type = "string", format = "binary")
-    private MultipartFile businessLogoFile;
+    private String idCardBackFile;
+
+
+    private String businessLogoFile;
 
 
 }

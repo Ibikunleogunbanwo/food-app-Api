@@ -17,7 +17,7 @@ public class ProductRegistration {
     private String productName;
 
     @NotEmpty(message = "Product description cannot be empty")
-    @Size( max = 500, message = "Product description must be between 10 and 80 characters")
+    @Size(max = 500, message = "Product description must be between 10 and 80 characters")
     private String productDescription;
 
     @NotNull(message = "Product price is required")
@@ -25,8 +25,7 @@ public class ProductRegistration {
     private BigDecimal basePrice;
 
     @NotNull(message = "Product image is required")
-    @Schema(description = "Product Image File", type = "string", format = "binary")
-    private MultipartFile productImage;
+    private String productImage;
 
     @NotEmpty(message = "Product category cannot be empty")
     private String productCategory;

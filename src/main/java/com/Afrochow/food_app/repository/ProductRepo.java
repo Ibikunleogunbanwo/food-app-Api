@@ -14,6 +14,8 @@ public interface ProductRepo extends JpaRepository<Product, Long> {
     Optional<Product> findProductByProductName(String productName);
     Optional<Product> findProductByProductCode(String productCode);
 
+    List<Product> findProductByProductNameContainingIgnoreCase(String productName);
+
 
     // Find all products available in a store by storeCode via the join entity StoreProduct
     @Query("SELECT sp.product FROM StoreProduct sp WHERE sp.store.storeCode = :storeCode")

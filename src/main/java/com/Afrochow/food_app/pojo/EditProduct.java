@@ -21,8 +21,7 @@ public class EditProduct {
     @Size(max = 500, message = "Description must be at most 500 characters")
     private String productDescription;
 
-    @Schema(description = "Product Image File", type = "string", format = "binary")
-    private MultipartFile productImage;
+    private String productImage;
 
     @NotBlank(message = "Category is required")
     private String category;

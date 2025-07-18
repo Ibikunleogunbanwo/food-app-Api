@@ -8,6 +8,7 @@ import com.Afrochow.food_app.pojo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
@@ -341,6 +342,51 @@ public class ApplicationService {
 
     //........................VENDOR SERVICE................................. //
 
+    public BaseResponse uploadVendorImages(
+            MultipartFile idCardFrontFile,
+            MultipartFile idCardBackFile,
+            MultipartFile businessLogoFile) {
+        BaseResponse response = new BaseResponse(true);
+
+        try {
+            // Validate all files are present
+            if (idCardFrontFile.isEmpty() || idCardBackFile.isEmpty() || businessLogoFile.isEmpty()) {
+                response.setStatusCode("400");
+                response.setMessage("One or more files are empty.");
+                response.setData(EMPTY_DATA);
+                return response;
+            }
+
+            // Optional: validate file types here for each file
+
+            // Save files
+            String idCardFrontFileUrl = fileStorageService.saveIdCardFront(idCardFrontFile);
+            String idCardBackFileUrl = fileStorageService.saveIdCardBack(idCardBackFile);
+            String businessLogoFileUrl = fileStorageService.saveBusinessLogo(businessLogoFile);
+
+            // Return all URLs in response
+            Map<String, String> urls = Map.of(
+                    "StoreLogoUrl", idCardFrontFileUrl,
+                    "StoreBannerUrl", idCardBackFileUrl,
+                    "StoreExtraMediaUrl", businessLogoFileUrl
+            );
+
+            response.setStatusCode(SUCCESS_STATUS_CODE);
+            response.setMessage("All media uploaded successfully.");
+            response.setData(urls);
+
+        } catch (Exception e) {
+            log.error("Error uploading store media", e);
+            response.setStatusCode("500");
+            response.setMessage("Upload failed: " + e.getMessage());
+            response.setData(EMPTY_DATA);
+        }
+
+        return response;
+    }
+
+
+
     public BaseResponse createVendorAccount(VendorRegistration vendorRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
 
@@ -363,23 +409,7 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            String frontUrl = null;
-            String backUrl = null;
-            String logoUrl = null;
 
-            if (vendorRegistration.getIdCardFrontFile() != null && !vendorRegistration.getIdCardFrontFile().isEmpty()) {
-                frontUrl = fileStorageService.saveFile(vendorRegistration.getIdCardFrontFile());
-            }
-
-            if (vendorRegistration.getIdCardBackFile() != null && !vendorRegistration.getIdCardBackFile().isEmpty()) {
-                backUrl = fileStorageService.saveFile(vendorRegistration.getIdCardBackFile());
-            }
-
-            if (vendorRegistration.getBusinessLogoFile() != null && !vendorRegistration.getBusinessLogoFile().isEmpty()) {
-                logoUrl = fileStorageService.saveFile(vendorRegistration.getBusinessLogoFile());
-            }
-
-            // Create new vendor account
             Vendor vendor = new Vendor();
             vendor.setVendorId(reUsableFunctions.generateId(vendorRegistration.getLastName()));
             vendor.setUserId(reUsableFunctions.generateId(vendorRegistration.getFirstName()));
@@ -391,11 +421,10 @@ public class ApplicationService {
             vendor.setBusinessLicenseNumber(vendorRegistration.getBusinessLicenseNumber());
             vendor.setBusinessName(vendorRegistration.getBusinessName());
             vendor.setTaxId(vendorRegistration.getTaxId());
-            vendor.setIdCardFrontUrl(frontUrl);
-            vendor.setIdCardBackUrl(backUrl);
-            vendor.setBusinessLogoUrl(logoUrl);
+            vendor.setIdCardFrontUrl(vendor.getIdCardFrontUrl());
+            vendor.setIdCardBackUrl(vendor.getIdCardBackUrl());
+            vendor.setBusinessLogoUrl(vendor.getBusinessLogoUrl());
 
-            // Set address if provided
             if (vendorRegistration.getAddress() != null) {
                 Address address = new Address();
                 address.setApartmentNumber(vendorRegistration.getAddress().getApartmentNumber());
@@ -418,11 +447,6 @@ public class ApplicationService {
                     "businessName", vendor.getBusinessName()
             ));
 
-        } catch (IOException e) {
-            // Specific file saving failure
-            baseResponse.setStatusCode("500");
-            baseResponse.setMessage("File upload failed: " + e.getMessage());
-            baseResponse.setData(EMPTY_DATA);
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
             baseResponse.setMessage("An error occurred: " + e.getMessage());
@@ -577,22 +601,6 @@ public class ApplicationService {
                 vendor.setPhoneNumber(newPhoneNumber.trim());
             }
 
-            // Save uploaded files (if provided)
-            String frontUrl = null;
-            String backUrl = null;
-            String logoUrl = null;
-
-            if (editVendor.getIdCardFrontFile() != null && !editVendor.getIdCardFrontFile().isEmpty()) {
-                frontUrl = fileStorageService.saveFile(editVendor.getIdCardFrontFile());
-            }
-
-            if (editVendor.getIdCardBackFile() != null && !editVendor.getIdCardBackFile().isEmpty()) {
-                backUrl = fileStorageService.saveFile(editVendor.getIdCardBackFile());
-            }
-
-            if (editVendor.getBusinessLogoFile() != null && !editVendor.getBusinessLogoFile().isEmpty()) {
-                logoUrl = fileStorageService.saveFile(editVendor.getBusinessLogoFile());
-            }
 
             // Conditionally update other fields
             vendor.setUserId(reUsableFunctions.getUpdatedValue(editVendor.getUserId(), vendor.getUserId()));
@@ -602,10 +610,10 @@ public class ApplicationService {
             vendor.setLastName(reUsableFunctions.getUpdatedValue(editVendor.getLastName(), vendor.getLastName()));
             vendor.setBusinessName(reUsableFunctions.getUpdatedValue(editVendor.getBusinessName(), vendor.getBusinessName()));
             vendor.setTaxId(reUsableFunctions.getUpdatedValue(editVendor.getTaxId(), vendor.getTaxId()));
-            vendor.setBusinessLogoUrl(reUsableFunctions.getUpdatedValue(logoUrl, vendor.getBusinessLogoUrl()));
+            vendor.setBusinessLogoUrl(reUsableFunctions.getUpdatedValue(editVendor.getBusinessLogoFile(), vendor.getBusinessLogoUrl()));
             vendor.setBusinessLicenseNumber(reUsableFunctions.getUpdatedValue(editVendor.getBusinessLicenseNumber(), vendor.getBusinessLicenseNumber()));
-            vendor.setIdCardBackUrl(reUsableFunctions.getUpdatedValue(backUrl, vendor.getIdCardBackUrl()));
-            vendor.setIdCardFrontUrl(reUsableFunctions.getUpdatedValue(frontUrl, vendor.getIdCardFrontUrl()));
+            vendor.setIdCardBackUrl(reUsableFunctions.getUpdatedValue(editVendor.getIdCardBackFile(), vendor.getIdCardBackUrl()));
+            vendor.setIdCardFrontUrl(reUsableFunctions.getUpdatedValue(editVendor.getIdCardFrontFile(), vendor.getIdCardFrontUrl()));
 
             if (vendor.getAddress() != null && editVendor.getAddress() != null) {
                 Address address = vendor.getAddress();
@@ -676,6 +684,31 @@ public class ApplicationService {
 
     //........................CREATING STORE INFORMATION SERVICE................................. //
 
+    public BaseResponse uploadStoreLogo(MultipartFile file) {
+        BaseResponse response = new BaseResponse(true);
+
+        try {
+            if (file.isEmpty()) {
+                response.setStatusCode("400");
+                response.setMessage("File is empty.");
+                response.setData(EMPTY_DATA);
+                return response;
+            }
+
+            String fileUrl = fileStorageService.saveVendorLogo(file);
+            response.setStatusCode(SUCCESS_STATUS_CODE);
+            response.setMessage("Image uploaded successfully.");
+            response.setData(Map.of("StoreLogoUrl", fileUrl));
+
+        } catch (Exception e) {
+            log.error("Error uploading store logo", e);
+            response.setStatusCode("500");
+            response.setMessage("Upload failed: " + e.getMessage());
+            response.setData(EMPTY_DATA);
+        }
+        return response;
+    }
+
     public BaseResponse createStore(StoreRegistration storeRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
 
@@ -701,15 +734,6 @@ public class ApplicationService {
             }
 
 
-            // Save uploaded files (if provided)
-            String storeLogo = null;
-
-
-            if (storeRegistration.getStoreLogo() != null && !storeRegistration.getStoreLogo().isEmpty()) {
-                storeLogo = fileStorageService.saveFile(storeRegistration.getStoreLogo());
-            }
-
-
             Vendor vendor = getVendorDetails.get();
 
 
@@ -718,7 +742,7 @@ public class ApplicationService {
             newStore.setStoreCode(reUsableFunctions.generateId(storeRegistration.getStoreName()));
             newStore.setVendor(vendor);
             newStore.setVendorCode(vendor.getVendorId());
-            newStore.setStoreLogo(storeLogo);
+            newStore.setStoreLogo(storeRegistration.getStoreLogo());
             newStore.setStoreName(storeRegistration.getStoreName());
             newStore.setStoreDescription(storeRegistration.getStoreDescription());
             newStore.setMaxDeliveryDistance(storeRegistration.getMaxDeliveryDistance());
@@ -775,19 +799,10 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            // Save uploaded files (if provided)
-            String storeLogo = null;
-
-
-            if (editStore.getStoreLogo() != null && !editStore.getStoreLogo().isEmpty()) {
-                storeLogo = fileStorageService.saveFile(editStore.getStoreLogo());
-            }
-
-
             Store store = getStore.get();
 
             store.setStoreName(reUsableFunctions.getUpdatedValue(editStore.getStoreName(), store.getStoreName()));
-            store.setStoreLogo(reUsableFunctions.getUpdatedValue(storeLogo, store.getStoreLogo()));
+            store.setStoreLogo(reUsableFunctions.getUpdatedValue(editStore.getStoreLogo(), store.getStoreLogo()));
             store.setStoreDescription(reUsableFunctions.getUpdatedValue(editStore.getStoreDescription(), store.getStoreDescription()));
             store.setMaxDeliveryDistance(reUsableFunctions.getUpdatedValue(editStore.getMaxDeliveryDistance(), store.getMaxDeliveryDistance()));
             store.setPickupAvailable(reUsableFunctions.getUpdatedValueBoolean(editStore.isPickupAvailable(), store.isPickupAvailable()));
@@ -1109,6 +1124,31 @@ public class ApplicationService {
 
 //    .............................Create Products.....................................................
 
+    public BaseResponse uploadProductImage(MultipartFile file) {
+        BaseResponse response = new BaseResponse(true);
+
+        try {
+            if (file.isEmpty()) {
+                response.setStatusCode("400");
+                response.setMessage("File is empty.");
+                response.setData(EMPTY_DATA);
+                return response;
+            }
+
+            String fileUrl = fileStorageService.saveProductImage(file);
+            response.setStatusCode(SUCCESS_STATUS_CODE);
+            response.setMessage("Image uploaded successfully.");
+            response.setData(Map.of("productImageUrl", fileUrl));
+
+        } catch (Exception e) {
+            log.error("Error uploading store logo", e);
+            response.setStatusCode("500");
+            response.setMessage("Upload failed: " + e.getMessage());
+            response.setData(EMPTY_DATA);
+        }
+        return response;
+    }
+
     public BaseResponse createProduct(ProductRegistration productRegistration) {
         BaseResponse baseResponse = new BaseResponse(true);
 
@@ -1121,14 +1161,6 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            // Save uploaded files (if provided)
-            String productImage = null;
-
-
-            if (productRegistration.getProductImage() != null && !productRegistration.getProductImage().isEmpty()) {
-                productImage = fileStorageService.saveFile(productRegistration.getProductImage());
-            }
-
             Store store = optionalStore.get();
 
             Product registeredProduct = new Product();
@@ -1137,7 +1169,7 @@ public class ApplicationService {
             registeredProduct.setStoreCode(productRegistration.getStoreCode());
             registeredProduct.setBasePrice(productRegistration.getBasePrice());
             registeredProduct.setProductDescription(productRegistration.getProductDescription());
-            registeredProduct.setProductImage(productImage);
+            registeredProduct.setProductImage(productRegistration.getProductImage());
             registeredProduct.setCategory(productRegistration.getProductCategory());
 
 
@@ -1153,7 +1185,8 @@ public class ApplicationService {
             baseResponse.setData(Map.of(
                     "StoreCode", store.getStoreCode(),
                     "Product Code", registeredProduct.getProductCode(),
-                    "Product Name", registeredProduct.getProductName()
+                    "Product Name", registeredProduct.getProductName(),
+                    "Product Category", registeredProduct.getCategory()
             ));
 
         } catch (Exception e) {
@@ -1164,7 +1197,6 @@ public class ApplicationService {
 
         return baseResponse;
     }
-
 
     public BaseResponse createBulkProduct(List<ProductRegistration> productRegistrationList) {
         BaseResponse baseResponse = new BaseResponse();
@@ -1179,6 +1211,7 @@ public class ApplicationService {
 
             String storeCode = productRegistrationList.get(0).getStoreCode();
             Optional<Store> optionalStore = storeRepo.findByStoreCode(storeCode);
+
             if (optionalStore.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Store ID not valid.");
@@ -1187,50 +1220,44 @@ public class ApplicationService {
             }
 
             Store store = optionalStore.get();
-            Vendor vendor = store.getVendor(); // Required for Product
+            Vendor vendor = store.getVendor();
 
             List<Product> productsToSave = new ArrayList<>();
+            List<Map<String, String>> createdProducts = new ArrayList<>();
+            List<String> skippedProducts = new ArrayList<>();
 
             for (ProductRegistration data : productRegistrationList) {
                 if (!storeCode.equals(data.getStoreCode())) {
+                    skippedProducts.add(data.getProductName());
                     continue;
                 }
 
-                // Save uploaded files (if provided)
-                String productImage = null;
-
-
-                if (data.getProductImage() != null && !data.getProductImage().isEmpty()) {
-                    productImage = fileStorageService.saveFile(data.getProductImage());
-                }
 
                 Product product = new Product();
                 product.setProductCode(reUsableFunctions.generateId(data.getProductName()));
                 product.setProductName(data.getProductName());
                 product.setStoreCode(store.getStoreCode());
                 product.setProductDescription(data.getProductDescription());
-                product.setProductImage(productImage);
+                product.setProductImage(data.getProductDescription());
                 product.setCategory(data.getProductCategory());
                 product.setBasePrice(data.getBasePrice());
                 product.setVendor(vendor);
-
-                // associate product to store
                 product.addStore(store);
 
                 productsToSave.add(product);
 
-
+                createdProducts.add(Map.of(
+                        "Product Code", product.getProductCode(),
+                        "Product Name", product.getProductName(),
+                        "Product Category" , product.getCategory()
+                ));
+            }
 
             productRepo.saveAll(productsToSave);
 
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
-            baseResponse.setMessage("Products created successfully.");
-            baseResponse.setData(Map.of(
-                    "StoreId", product.getStoreCode(),
-                    "Product Code", product.getProductCode(),
-                    "Product Name", product.getProductName()
-            ));
-            }
+            baseResponse.setMessage("Products processed successfully.");
+            baseResponse.setData(EMPTY_DATA);
 
         } catch (Exception e) {
             baseResponse.setStatusCode("500");
@@ -1254,13 +1281,6 @@ public class ApplicationService {
                 return baseResponse;
             }
 
-            // Save uploaded files (if provided)
-            String productImage = null;
-
-
-            if (editProduct.getProductImage() != null && !editProduct.getProductImage().isEmpty()) {
-                productImage = fileStorageService.saveFile(editProduct.getProductImage());
-            }
 
 
             Product product = existingProduct.get();
@@ -1272,7 +1292,7 @@ public class ApplicationService {
                 product.setProductDescription(editProduct.getProductDescription());
             }
             if (editProduct.getProductImage() != null) {
-                product.setProductImage(productImage);
+                product.setProductImage(editProduct.getProductDescription());
             }
             if (editProduct.getCategory() != null) {
                 product.setCategory(editProduct.getCategory());
@@ -1330,7 +1350,87 @@ public class ApplicationService {
         return baseResponse;
     }
 
+    public BaseResponse getAllProducts() {
+        BaseResponse baseResponse = new BaseResponse(true);
+        try {
+            List<Product> fetchAllProducts = productRepo.findAll();
 
+            if (fetchAllProducts.isEmpty()) {
+                baseResponse.setStatusCode("404");
+                baseResponse.setMessage("No products found");
+                baseResponse.setData(EMPTY_DATA);
+                return baseResponse;
+            }
+
+
+
+            List<ProductDTO> result = new ArrayList<>();
+
+            for (Product product : fetchAllProducts) {
+                ProductDTO productDTO = new ProductDTO();
+
+                productDTO.setProductCode(product.getProductCode());
+                productDTO.setProductName(product.getProductName());
+                productDTO.setProductDescription(product.getProductDescription());
+                productDTO.setProductImage(product.getProductImage());
+                productDTO.setProductCategory(product.getCategory());
+                productDTO.setBasePrice(product.getBasePrice().toString());
+
+
+            result.add(productDTO);
+            }
+
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
+            baseResponse.setMessage("Products retrieved successfully");
+            baseResponse.setData(result);
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+        }
+
+        return baseResponse;
+    }
+
+    public BaseResponse getAllProductsByName(String productName) {
+        BaseResponse baseResponse = new BaseResponse(true);
+
+        try {
+            List<Product> targetProducts = productRepo.findProductByProductNameContainingIgnoreCase(productName);
+
+            if (targetProducts.isEmpty()) {
+                baseResponse.setStatusCode("404");
+                baseResponse.setMessage("No products found matching: " + productName);
+                baseResponse.setData(EMPTY_DATA);
+                return baseResponse;
+            }
+
+            List<ProductDTO> result = new ArrayList<>();
+            for (Product product : targetProducts) {
+                ProductDTO productDTO = new ProductDTO();
+                productDTO.setProductCode(product.getProductCode());
+                productDTO.setProductName(product.getProductName());
+                productDTO.setProductDescription(product.getProductDescription());
+                productDTO.setProductImage(product.getProductImage());
+                productDTO.setProductCategory(product.getCategory());
+                productDTO.setBasePrice(product.getBasePrice().toString());
+
+                result.add(productDTO);
+            }
+
+            baseResponse.setStatusCode(SUCCESS_STATUS_CODE); // likely "200"
+            baseResponse.setMessage("Products retrieved successfully");
+            baseResponse.setData(result);
+
+        } catch (Exception e) {
+            baseResponse.setStatusCode("500");
+            baseResponse.setMessage("An error occurred: " + e.getMessage());
+            baseResponse.setData(EMPTY_DATA);
+        }
+
+        return baseResponse;
+    }
 
 
 

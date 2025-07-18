@@ -23,8 +23,7 @@ public class EditStore {
     @Size(max = 255, message = "Description must be at most 255 characters")
     private String storeDescription;
 
-    @Schema(description = "Store Logo File", type = "string", format = "binary")
-    private MultipartFile storeLogo;
+    private String storeLogo;
 
     @Size(max = 20, message = "Phone number must be at most 20 characters")
     private String storePhoneNumber;

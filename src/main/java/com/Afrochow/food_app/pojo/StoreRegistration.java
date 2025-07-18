@@ -14,8 +14,7 @@ public class StoreRegistration {
     @NotEmpty(message = "Business Owner Id cannot be empty")
     private String vendorId;
 
-    @Schema(description = "Store Logo File", type = "string", format = "binary")
-    private MultipartFile storeLogo;
+    private String storeLogo;
 
     @NotEmpty(message = "Store name cannot be empty")
     private String storeName;
