@@ -349,7 +349,7 @@ public class ApplicationService {
         BaseResponse response = new BaseResponse(true);
 
         try {
-            // Validate all files are present
+
             if (idCardFrontFile.isEmpty() || idCardBackFile.isEmpty() || businessLogoFile.isEmpty()) {
                 response.setStatusCode("400");
                 response.setMessage("One or more files are empty.");
@@ -357,18 +357,16 @@ public class ApplicationService {
                 return response;
             }
 
-            // Optional: validate file types here for each file
 
-            // Save files
             String idCardFrontFileUrl = fileStorageService.saveIdCardFront(idCardFrontFile);
             String idCardBackFileUrl = fileStorageService.saveIdCardBack(idCardBackFile);
             String businessLogoFileUrl = fileStorageService.saveBusinessLogo(businessLogoFile);
 
             // Return all URLs in response
             Map<String, String> urls = Map.of(
-                    "StoreLogoUrl", idCardFrontFileUrl,
-                    "StoreBannerUrl", idCardBackFileUrl,
-                    "StoreExtraMediaUrl", businessLogoFileUrl
+                    "idCardFrontUrl", idCardFrontFileUrl,
+                    "idCardBackUrl", idCardBackFileUrl,
+                    "businessLogoUrl", businessLogoFileUrl
             );
 
             response.setStatusCode(SUCCESS_STATUS_CODE);
