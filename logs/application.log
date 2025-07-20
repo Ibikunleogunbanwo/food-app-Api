@@ -85,3 +85,7 @@ java.io.IOException: File type not allowed: .gif
 2025-07-18T18:29:09.894-06:00  INFO 79051 --- [food_app] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 413 ms
 2025-07-18T18:29:26.549-06:00  INFO 79051 --- [food_app] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
 2025-07-18T18:29:26.551-06:00  INFO 79051 --- [food_app] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2025-07-19T14:26:34.990-06:00  INFO 85765 --- [food_app] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 430 ms
+2025-07-19T14:27:31.525-06:00  INFO 85765 --- [food_app] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-07-19T14:27:31.527-06:00  INFO 85765 --- [food_app] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2025-07-19T14:28:06.580-06:00  INFO 85935 --- [food_app] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 404 ms
