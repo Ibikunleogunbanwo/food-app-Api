@@ -90,7 +90,7 @@ public class ApplicationController {
 
     @Operation(summary = "Register a vendor")
     @PostMapping("/vendor/register")
-    public ResponseEntity<BaseResponse> createVendorAccount(@Valid @ModelAttribute VendorRegistration vendorRegistration) {
+    public ResponseEntity<BaseResponse> createVendorAccount(@Valid @RequestBody VendorRegistration vendorRegistration) {
         BaseResponse baseResponse = appService.createVendorAccount(vendorRegistration);
         HttpStatus status;
         switch (baseResponse.getStatusCode()) {
@@ -115,7 +115,7 @@ public class ApplicationController {
 
     @Operation(summary = "Create a Bulk Product", description = "Add a Bulk Product to a store")
     @PostMapping("product/bulkRegister")
-    public ResponseEntity<?> createBulkProduct (@Valid @ModelAttribute List<ProductRegistration> productRegistrationList){
+    public ResponseEntity<?> createBulkProduct (@Valid @RequestBody List<ProductRegistration> productRegistrationList){
         BaseResponse baseResponse = appService.createBulkProduct(productRegistrationList);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(),"200") ?HttpStatus.OK :HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse,status);
@@ -133,7 +133,7 @@ public class ApplicationController {
 
     @Operation(summary = "Create a new Store", description = "Add a new Store to the DB")
     @PostMapping("store/register")
-    public ResponseEntity<?> createStore (@Valid @ModelAttribute StoreRegistration storeRegistration){
+    public ResponseEntity<?> createStore (@Valid @RequestBody StoreRegistration storeRegistration){
         BaseResponse baseResponse = appService.createStore(storeRegistration);
         HttpStatus status;
         switch (baseResponse.getStatusCode()) {
@@ -161,7 +161,7 @@ public class ApplicationController {
 
     @Operation(summary = "Update Vendor Profile", description = "Modify Existing Vendor Profile")
     @PutMapping("vendor/update")
-    public ResponseEntity<?> editSeller (@Valid @ModelAttribute EditVendor editVendor){
+    public ResponseEntity<?> editSeller (@Valid @RequestBody EditVendor editVendor){
         BaseResponse baseResponse = appService.editVendor(editVendor);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse,status);
@@ -170,7 +170,7 @@ public class ApplicationController {
 
     @Operation(summary = "Update Store Information", description = "Modify Existing Store Information")
     @PutMapping("store/update")
-    public ResponseEntity<?> editStore (@Valid @ModelAttribute EditStore editStore){
+    public ResponseEntity<?> editStore (@Valid @RequestBody EditStore editStore){
         BaseResponse baseResponse = appService.updateStore(editStore);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(),"200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse,status);
@@ -179,7 +179,7 @@ public class ApplicationController {
 
     @Operation(summary = "Update Product", description = "Modify Existing Product")
     @PutMapping("store/update-product")
-    public ResponseEntity<?> editProduct (@Valid @ModelAttribute EditProduct editProduct){
+    public ResponseEntity<?> editProduct (@Valid @RequestBody EditProduct editProduct){
         BaseResponse baseResponse = appService.editProduct(editProduct);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(),"200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse,status);
@@ -243,8 +243,8 @@ public class ApplicationController {
 
     @Operation(summary = "Get user by ID", description = "Retrieve a user's details using their ID")
     @GetMapping("customer")
-    public ResponseEntity<?> getCustomerById(@RequestParam("userId") String userId) {
-        BaseResponse baseResponse = appService.getCustomerById(userId);
+    public ResponseEntity<?> getCustomerById(@RequestParam("userId") String userCode) {
+        BaseResponse baseResponse = appService.getCustomerById(userCode);
 
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200")
                 ? HttpStatus.OK
@@ -256,8 +256,8 @@ public class ApplicationController {
 
     @Operation(summary = "Get Vendor by ID", description = "Retrieve a vendor's details using their ID")
     @GetMapping ("vendor")
-    public ResponseEntity<?> getVendorById(@RequestParam("vendorId") String vendorId){
-        BaseResponse baseResponse = appService.getVendorById(vendorId);
+    public ResponseEntity<?> getVendorById(@RequestParam("vendorId") String vendorCode){
+        BaseResponse baseResponse = appService.getVendorById(vendorCode);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200")
                 ? HttpStatus.OK
                 : HttpStatus.BAD_REQUEST;
@@ -269,8 +269,8 @@ public class ApplicationController {
 
     @Operation(summary = "Get store by ID", description = "Retrieve a store's details using their ID")
     @GetMapping ("stores")
-    public ResponseEntity <?> getStoreById (@RequestParam("storeCode") String storeId) {
-        BaseResponse baseResponse = appService.getStoreById(storeId);
+    public ResponseEntity <?> getStoreById (@RequestParam("storeCode") String storeCode) {
+        BaseResponse baseResponse = appService.getStoreById(storeCode);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200")
                 ? HttpStatus.OK
                 : HttpStatus.BAD_REQUEST;
@@ -304,24 +304,24 @@ public class ApplicationController {
 
     @Operation(summary = "Delete a user", description = "Delete a user from the system using their ID")
     @DeleteMapping("customer/delete-user")
-    public ResponseEntity<?> deleteUser(@RequestParam("userId") String userId) {
-        BaseResponse baseResponse = appService.deleteCustomer(userId);
+    public ResponseEntity<?> deleteUser(@RequestParam("userCode") String userCode) {
+        BaseResponse baseResponse = appService.deleteCustomer(userCode);
         HttpStatus status = "200".equals(baseResponse.getStatusCode()) ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse, status);
     }
 
     @Operation(summary = "Delete a vendor", description = "Delete a vendor from the system using their ID")
     @DeleteMapping("vendor/delete-vendor")
-    public ResponseEntity<?> deleteVendor(@RequestParam("sellerId") String vendorId) {
-        BaseResponse baseResponse = appService.deleteVendor(vendorId);
+    public ResponseEntity<?> deleteVendor(@RequestParam("Vendor Code") String vendorCode) {
+        BaseResponse baseResponse = appService.deleteVendor(vendorCode);
         HttpStatus status = "200".equals(baseResponse.getStatusCode()) ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse, status);
     }
 
     @Operation(summary = "Delete a Store", description = "Delete a Store from the system using their ID")
     @DeleteMapping("store/delete-store")
-    public ResponseEntity<?> deleteStore (@RequestParam("storeCode") String storeId) {
-        BaseResponse baseResponse = appService.deleteStore(storeId);
+    public ResponseEntity<?> deleteStore (@RequestParam("storeCode") String storeCode) {
+        BaseResponse baseResponse = appService.deleteStore(storeCode);
         HttpStatus status = Objects.equals(baseResponse.getStatusCode(), "200") ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(baseResponse, status);
     }

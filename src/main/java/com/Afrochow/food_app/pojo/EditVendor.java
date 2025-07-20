@@ -14,7 +14,7 @@ public class EditVendor extends EditUser {
     private String businessLicenseNumber;
 
     @NotBlank
-    private String vendorId;
+    private String vendorCode;
 
     @NotBlank(message = "Business name is required")
     private String businessName;

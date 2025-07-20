@@ -1,6 +1,7 @@
 package com.Afrochow.food_app.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -11,11 +12,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@DiscriminatorValue("VENDOR")
+@DiscriminatorValue("Vendor")
+@Table(name = "vendor")
 public class Vendor extends User {
 
     @Column(unique = true, nullable = false)
-    private String vendorId;
+    private String vendorCode;
 
     @Column(unique = true)
     private String businessLicenseNumber;
@@ -24,9 +26,11 @@ public class Vendor extends User {
     private String taxId;
 
     @Column(length = 512)
+    @NotNull(message = "ID card must be uploaded")
     private String idCardFrontUrl;
 
     @Column(length = 512)
+    @NotNull(message = "ID card must be uploaded")
     private String idCardBackUrl;
 
     @Column(length = 512)

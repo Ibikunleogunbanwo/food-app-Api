@@ -14,7 +14,7 @@ public class EditStore {
     private String storeCode;
 
     @NotBlank(message = "Store ID cannot be empty")
-    private String vendorId;
+    private String vendorCode;
 
     @NotBlank(message = "Store name is required")
     @Size(max = 100, message = "Store name must be at most 100 characters")

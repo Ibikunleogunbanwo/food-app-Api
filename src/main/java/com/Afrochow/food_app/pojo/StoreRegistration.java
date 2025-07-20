@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class StoreRegistration {
 
     @NotEmpty(message = "Business Owner Id cannot be empty")
-    private String vendorId;
+    private String vendorCode;
 
     private String storeLogo;
 

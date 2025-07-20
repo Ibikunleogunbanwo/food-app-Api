@@ -25,7 +25,7 @@ public class User {
     private Long id;
 
     @Column(unique = true)
-    private String userId;
+    private String userCode;
 
     @Column(nullable = false)
     private String firstName;

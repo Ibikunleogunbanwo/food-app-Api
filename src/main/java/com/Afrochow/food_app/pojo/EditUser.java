@@ -12,7 +12,7 @@ import static com.Afrochow.food_app.config.AppConstant.PHONE_NUMBER_VALIDATION;
 public class EditUser {
 
     @NotEmpty(message = "User ID cannot be empty")
-    private String userId;
+    private String userCode;
 
     @Size(max = 50, message = "First name must be at most 50 characters")
     private String firstName;

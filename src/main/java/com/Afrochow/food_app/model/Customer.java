@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@DiscriminatorValue("CUSTOMER")
+@DiscriminatorValue("Customer")
 @Table(name = "customers")
 @Data
 @NoArgsConstructor
@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class Customer extends User {
 
 
-    private String customerId;
+    private String customerCode;
     private Integer loyaltyPoints;
 
     @Column(name = "preferred_delivery_time")

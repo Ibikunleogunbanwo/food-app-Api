@@ -5,13 +5,13 @@ import com.Afrochow.food_app.repository.*;
 import com.Afrochow.food_app.response_dto.*;
 import com.Afrochow.food_app.config.ReUsableFunctions;
 import com.Afrochow.food_app.pojo.*;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
@@ -80,8 +80,8 @@ public class ApplicationService {
 
             customer.setFirstName(customerRegistration.getFirstName());
             customer.setLastName(customerRegistration.getLastName());
-            customer.setUserId(reUsableFunctions.generateId(customer.getFirstName()));
-            customer.setCustomerId(reUsableFunctions.generateId(customerRegistration.getLastName()));
+            customer.setUserCode(reUsableFunctions.generateId(customer.getFirstName()));
+            customer.setCustomerCode(reUsableFunctions.generateId(customerRegistration.getLastName()));
             customer.setEmail(customerRegistration.getEmail());
             customer.setPassword(reUsableFunctions.encryptPassword(customerRegistration.getPassword()));
             customer.setPhoneNumber(customerRegistration.getPhoneNumber());
@@ -111,7 +111,7 @@ public class ApplicationService {
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Vendor account created successfully.");
             baseResponse.setData(Map.of(
-                    "CustomerId", customer.getCustomerId(),
+                    "CustomerId", customer.getCustomerCode(),
                     "email", customer.getEmail(),
                     "First Name", customer.getFirstName(),
                     "Last Name", customer.getLastName()
@@ -175,30 +175,20 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse deleteCustomer(String userId) {
+    public BaseResponse deleteCustomer(String userCode) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            if (userId == null || userId.trim().isEmpty()) {
+            if (userCode == null || userCode.trim().isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("User ID cannot be empty");
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
-            long id;
 
-            try {
-                id = Long.parseLong(userId);
-            } catch (NumberFormatException e) {
-                baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("Invalid User ID format");
-                baseResponse.setData(EMPTY_DATA);
-                return baseResponse;
-            }
-
-            User user = userRepo.findById(id)
-                    .orElseThrow(() -> new RuntimeException("No User found with ID: " + userId));
+            User user = userRepo.findByUserCode(userCode)
+                    .orElseThrow(() -> new RuntimeException("No User found with ID: " + userCode));
 
             userRepo.delete(user);
 
@@ -215,34 +205,23 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getCustomerById(String userId) {
+    public BaseResponse getCustomerById(String userCode) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            if (userId == null || userId.trim().isEmpty()) {
+            if (userCode == null || userCode.trim().isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("User ID cannot be empty");
+                baseResponse.setMessage("User Code cannot be empty");
                 baseResponse.setData(EMPTY_DATA);
                 return baseResponse;
             }
 
-            long id;
-
-            try {
-                id = Long.parseLong(userId);
-            } catch (NumberFormatException e) {
-                baseResponse.setStatusCode(ERROR_STATUS_CODE);
-                baseResponse.setMessage("Invalid User ID format");
-                baseResponse.setData(EMPTY_DATA);
-                return baseResponse;
-            }
-
-            Customer customer = customerRepo.findCustomerById(id)
+            Customer customer = customerRepo.findByUserCode(userCode)
                     .orElseThrow(() -> new RuntimeException("No user found"));
 
             CustomerDTO customerDTO = new CustomerDTO();
 
-            customerDTO.setUserId(customer.getUserId());
+            customerDTO.setUserId(customer.getUserCode());
             customerDTO.setFirstName(customer.getFirstName());
             customerDTO.setLastName(customer.getLastName());
             customerDTO.setEmail(customer.getEmail());
@@ -280,15 +259,16 @@ public class ApplicationService {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Long userId = Long.parseLong(editCustomer.getUserId());
+            Optional<User> userOpt = userRepo.findByUserCode(editCustomer.getUserCode());
             String newPhoneNumber = editCustomer.getPhoneNumber();
 
-            // Check for existing phone number assigned to a different customer
             if (newPhoneNumber != null && !newPhoneNumber.trim().isEmpty()) {
-                Optional<Customer> existingCustomerWithPhone = customerRepo.findCustomerByPhoneNumber(newPhoneNumber.trim());
+                Optional<User> existingCustomerWithPhone = userRepo.findByPhoneNumber(newPhoneNumber.trim());
 
-                if (existingCustomerWithPhone.isPresent() &&
-                        !existingCustomerWithPhone.get().getId().equals(userId)) {
+                if (existingCustomerWithPhone.isPresent()
+                        && userOpt.isPresent()
+                        && !existingCustomerWithPhone.get().getUserCode().equals(userOpt.get().getUserCode())) {
+
                     baseResponse.setStatusCode(ERROR_STATUS_CODE);
                     baseResponse.setMessage("Phone number already exists");
                     baseResponse.setData(EMPTY_DATA);
@@ -296,9 +276,8 @@ public class ApplicationService {
                 }
             }
 
-            // Fetch existing customer
-            Customer customer = customerRepo.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("No user found"));
+        Customer customer = customerRepo.findByUserCode(editCustomer.getUserCode())
+                .orElseThrow(() -> new EntityNotFoundException("Customer not found with userCode: " + editCustomer.getUserCode()));
 
             // Update basic fields
             customer.setFirstName(reUsableFunctions.getUpdatedValue(editCustomer.getFirstName(), customer.getFirstName()));
@@ -324,7 +303,7 @@ public class ApplicationService {
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("User updated successfully");
             baseResponse.setData(Map.of(
-                    "CustomerId", customer.getCustomerId(),
+                    "CustomerId", customer.getCustomerCode(),
                     "email", customer.getEmail(),
                     "First Name", customer.getFirstName(),
                     "Last Name", customer.getLastName()
@@ -409,8 +388,8 @@ public class ApplicationService {
 
 
             Vendor vendor = new Vendor();
-            vendor.setVendorId(reUsableFunctions.generateId(vendorRegistration.getLastName()));
-            vendor.setUserId(reUsableFunctions.generateId(vendorRegistration.getFirstName()));
+            vendor.setVendorCode(reUsableFunctions.generateId(vendorRegistration.getLastName()));
+            vendor.setUserCode(reUsableFunctions.generateId(vendorRegistration.getFirstName()));
             vendor.setFirstName(vendorRegistration.getFirstName());
             vendor.setLastName(vendorRegistration.getLastName());
             vendor.setEmail(vendorRegistration.getEmail());
@@ -419,9 +398,9 @@ public class ApplicationService {
             vendor.setBusinessLicenseNumber(vendorRegistration.getBusinessLicenseNumber());
             vendor.setBusinessName(vendorRegistration.getBusinessName());
             vendor.setTaxId(vendorRegistration.getTaxId());
-            vendor.setIdCardFrontUrl(vendor.getIdCardFrontUrl());
-            vendor.setIdCardBackUrl(vendor.getIdCardBackUrl());
-            vendor.setBusinessLogoUrl(vendor.getBusinessLogoUrl());
+            vendor.setIdCardFrontUrl(vendorRegistration.getIdCardFrontUrl());
+            vendor.setIdCardBackUrl(vendorRegistration.getIdCardBackUrl());
+            vendor.setBusinessLogoUrl(vendorRegistration.getBusinessLogoUrl());
 
             if (vendorRegistration.getAddress() != null) {
                 Address address = new Address();
@@ -440,7 +419,7 @@ public class ApplicationService {
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Vendor account created successfully.");
             baseResponse.setData(Map.of(
-                    "vendorId", vendor.getVendorId(),
+                    "vendorId", vendor.getVendorCode(),
                     "email", vendor.getEmail(),
                     "businessName", vendor.getBusinessName()
             ));
@@ -459,14 +438,14 @@ public class ApplicationService {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            List<Vendor> fetchAllSellers = vendorRepo.findAllByOrderByVendorIdDesc();
+            List<Vendor> fetchAllSellers = vendorRepo.findAllByOrderByVendorCodeDesc();
             List<VendorDTO> sellerResult = new ArrayList<>();
 
             for (Vendor vendor : fetchAllSellers) {
                 VendorDTO vendorDTO = new VendorDTO();
 
-                vendorDTO.setUserId(vendor.getUserId());
-                vendorDTO.setVendorId(vendor.getVendorId());
+                vendorDTO.setUserId(vendor.getUserCode());
+                vendorDTO.setVendorId(vendor.getVendorCode());
                 vendorDTO.setFirstName(vendor.getFirstName());
                 vendorDTO.setLastName(vendor.getLastName());
                 vendorDTO.setPhoneNumber(vendor.getPhoneNumber());
@@ -506,11 +485,11 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse getVendorById(String vendorId) {
+    public BaseResponse getVendorById(String vendorCode) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorId(vendorId);
+            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorCode(vendorCode);
             if (getVendorDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Business Owner Id does not Exist");
@@ -526,8 +505,8 @@ public class ApplicationService {
             VendorDTO vendorDTO = new VendorDTO();
 
 
-            vendorDTO.setUserId(vendor.getUserId());
-            vendorDTO.setVendorId(vendor.getVendorId());
+            vendorDTO.setUserId(vendor.getUserCode());
+            vendorDTO.setVendorId(vendor.getVendorCode());
             vendorDTO.setFirstName(vendor.getFirstName());
             vendorDTO.setLastName(vendor.getLastName());
             vendorDTO.setPhoneNumber(vendor.getPhoneNumber());
@@ -573,7 +552,7 @@ public class ApplicationService {
 
         try {
 
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(editVendor.getVendorId());
+            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorCode(editVendor.getVendorCode());
             if (getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Vendor Id does not Exist");
@@ -601,8 +580,8 @@ public class ApplicationService {
 
 
             // Conditionally update other fields
-            vendor.setUserId(reUsableFunctions.getUpdatedValue(editVendor.getUserId(), vendor.getUserId()));
-            vendor.setVendorId(reUsableFunctions.getUpdatedValue(editVendor.getVendorId(), vendor.getPhoneNumber()));
+            vendor.setUserCode(reUsableFunctions.getUpdatedValue(editVendor.getUserCode(), vendor.getUserCode()));
+            vendor.setVendorCode(reUsableFunctions.getUpdatedValue(editVendor.getVendorCode(), vendor.getPhoneNumber()));
             vendor.setPhoneNumber(reUsableFunctions.getUpdatedValue(editVendor.getPhoneNumber(), vendor.getFirstName()));
             vendor.setFirstName(reUsableFunctions.getUpdatedValue(editVendor.getFirstName(), vendor.getFirstName()));
             vendor.setLastName(reUsableFunctions.getUpdatedValue(editVendor.getLastName(), vendor.getLastName()));
@@ -634,7 +613,7 @@ public class ApplicationService {
             baseResponse.setStatusCode(SUCCESS_STATUS_CODE);
             baseResponse.setMessage("Vendor account created successfully.");
             baseResponse.setData(Map.of(
-                    "vendorId", vendor.getVendorId(),
+                    "vendorId", vendor.getVendorCode(),
                     "email", vendor.getEmail(),
                     "businessName", vendor.getBusinessName()
             ));
@@ -648,11 +627,11 @@ public class ApplicationService {
         return baseResponse;
     }
 
-    public BaseResponse deleteVendor(String vendorId) {
+    public BaseResponse deleteVendor(String vendorCode) {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorId(vendorId);
+            Optional<Vendor> getBusinessOwnerDetails = vendorRepo.findByVendorCode(vendorCode);
             if (getBusinessOwnerDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Vendor Id does not Exist");
@@ -712,7 +691,7 @@ public class ApplicationService {
 
         try {
 
-            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorId(storeRegistration.getVendorId());
+            Optional<Vendor> getVendorDetails = vendorRepo.findByVendorCode(storeRegistration.getVendorCode());
             if (getVendorDetails.isEmpty()) {
                 baseResponse.setStatusCode(ERROR_STATUS_CODE);
                 baseResponse.setMessage("Business Owner Id does not Exist");
@@ -739,7 +718,7 @@ public class ApplicationService {
 
             newStore.setStoreCode(reUsableFunctions.generateId(storeRegistration.getStoreName()));
             newStore.setVendor(vendor);
-            newStore.setVendorCode(vendor.getVendorId());
+            newStore.setVendorCode(vendor.getVendorCode());
             newStore.setStoreLogo(storeRegistration.getStoreLogo());
             newStore.setStoreName(storeRegistration.getStoreName());
             newStore.setStoreDescription(storeRegistration.getStoreDescription());
@@ -787,7 +766,7 @@ public class ApplicationService {
         BaseResponse baseResponse = new BaseResponse(true);
 
         try {
-            Optional<Vendor> businessOwner = vendorRepo.findByVendorId(editStore.getVendorId());
+            Optional<Vendor> businessOwner = vendorRepo.findByVendorCode(editStore.getVendorCode());
             Optional<Store> getStore = storeRepo.findByStoreCode(editStore.getStoreCode());
 
             if (getStore.isEmpty()) {

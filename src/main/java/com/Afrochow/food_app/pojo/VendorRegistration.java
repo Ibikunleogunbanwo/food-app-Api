@@ -18,12 +18,12 @@ public class VendorRegistration extends UserRegistration {
 
     private String taxId;
 
-    @Schema(description = "Front of ID card", type = "string", format = "binary")
-    private MultipartFile idCardFrontFile;
 
-    @Schema(description = "Back of ID card", type = "string", format = "binary")
-    private MultipartFile idCardBackFile;
+    private String idCardFrontUrl;
 
-    @Schema(description = "Business logo", type = "string", format = "binary")
-    private MultipartFile businessLogoFile;
+
+    private String idCardBackUrl;
+
+
+    private String businessLogoUrl;
 }
